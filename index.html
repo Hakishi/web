@@ -1128,5 +1128,48 @@ function tryUnlock(){
 unlockBtn.addEventListener('click',tryUnlock);
 secretInput.addEventListener('keyup',(e)=>{ if(e.key==='Enter') tryUnlock(); });
 </script>
+<script>
+  const startTime = Date.now();
+  const sessionId = 'sess_' + Date.now() + '_' + Math.random().toString(36).substring(2, 10);
+
+  async function logVisit(isClosing = false) {
+    const timeSpent = isClosing ? Math.round((Date.now() - startTime) / 1000) : 0;
+
+    const stats = {
+      sessionId: sessionId,
+      screenRes: `${window.screen.width}x${window.screen.height}`,
+      language: navigator.language,
+      pageUrl: window.location.href,
+      referrer: document.referrer || 'Direct',
+      timeSpent: timeSpent
+    };
+
+    try {
+      await fetch('/.netlify/functions/track', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(stats),
+        keepalive: true
+      });
+    } catch (e) {
+      console.log('Tracking failed:', e);
+    }
+  }
+
+  // Log on page load
+  logVisit();
+
+  // Log again when user leaves (to capture time spent)
+  window.addEventListener('visibilitychange', () => {
+    if (document.visibilityState === 'hidden') {
+      logVisit(true);
+    }
+  });
+
+  // Backup: log on page unload
+  window.addEventListener('beforeunload', () => {
+    logVisit(true);
+  });
+</script>
 </body>
 </html>
