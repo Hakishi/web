@@ -1544,6 +1544,34 @@
       pointer-events: none;
     }
 
+    /* Fix love letter section layout jump */
+    #loveletter {
+      min-height: 100vh;
+      padding: 100px 20px;
+    }
+
+    #loveletter .section-inner {
+      min-height: 600px;
+      justify-content: center;
+    }
+
+    #loveletter #letterText {
+      min-height: 380px;
+      white-space: pre-wrap;
+    }
+
+    @media (max-width: 600px) {
+      .letter-box {
+        min-height: 600px;
+        padding: 26px 18px;
+      }
+
+      #loveletter #letterText {
+        min-height: 480px;
+        font-size: 14px;
+      }
+    }
+
     #letterText {
       font-size: 15.5px;
       line-height: 1.9;
@@ -2696,7 +2724,7 @@
     /* ---------- Hero Floating Photos (20 sources) ---------- */
     const floatField = document.getElementById('floatingPhotoField');
     const heroPhotoSources = ['https://res.cloudinary.com/khovkitp/image/upload/v1785420307/floaty1_oxyvat.jpg', 'https://res.cloudinary.com/khovkitp/image/upload/v1785420307/floaty2_sy51j4.jpg', 'https://res.cloudinary.com/khovkitp/image/upload/v1785420308/floaty3_z5m609.jpg', 'https://res.cloudinary.com/khovkitp/image/upload/v1785420308/floaty4_cutppg.jpg', 'https://res.cloudinary.com/khovkitp/image/upload/v1785420308/floaty5_peeotg.jpg',
-      'https://res.cloudinary.com/khovkitp/image/upload/v1785420308/floaty6_h6vvy4.jpg', 'https://res.cloudinary.com/khovkitp/image/upload/v1785420308/floaty7_yv8qwi.jpg', 'images/floaty8.jpg', 'https://res.cloudinary.com/khovkitp/image/upload/v1785420308/floaty9_p8qzmn.jpg', 'https://res.cloudinary.com/khovkitp/image/upload/v1785420309/floaty10_cjzpjp.jpg',
+      'https://res.cloudinary.com/khovkitp/image/upload/v1785420308/floaty6_h6vvy4.jpg', 'https://res.cloudinary.com/khovkitp/image/upload/v1785420308/floaty7_yv8qwi.jpg', 'https://res.cloudinary.com/khovkitp/image/upload/v1785523251/floaty8_dnmnjl.jpg', 'https://res.cloudinary.com/khovkitp/image/upload/v1785420308/floaty9_p8qzmn.jpg', 'https://res.cloudinary.com/khovkitp/image/upload/v1785420309/floaty10_cjzpjp.jpg',
       'https://res.cloudinary.com/khovkitp/image/upload/v1785420309/floaty11_yxz35y.jpg', 'https://res.cloudinary.com/khovkitp/image/upload/v1785420309/floaty12_r6j2kn.jpg', 'https://res.cloudinary.com/khovkitp/image/upload/v1785420309/floaty13_bdziz7.jpg', 'https://res.cloudinary.com/khovkitp/image/upload/v1785420309/floaty14_faht1m.jpg', 'https://res.cloudinary.com/khovkitp/image/upload/v1785420309/floaty15_dfnhua.jpg',
       'https://res.cloudinary.com/khovkitp/image/upload/v1785420311/g7_xwufqz.jpg', 'https://res.cloudinary.com/khovkitp/image/upload/v1785420309/floaty17_wpwgl1.jpg', 'https://res.cloudinary.com/khovkitp/image/upload/v1785420310/floaty18_ycrwyd.jpg', 'https://res.cloudinary.com/khovkitp/image/upload/v1785420310/floaty19_uxk4sr.jpg', 'https://res.cloudinary.com/khovkitp/image/upload/v1785420310/floaty20_gv0exr.jpg'];
     function spawnFloatingPhoto() {
