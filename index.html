@@ -8,7 +8,7 @@
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>For Kalu 🐾 — Happy Girlfriend Day</title>
   <link rel="preconnect" href="https://fonts.googleapis.com">
-  <link <link
+  <link
     href="https://fonts.googleapis.com/css2?family=Orbitron:wght@500;700;900&family=Poppins:wght@300;400;500;600;700&family=Dancing+Script:wght@600;700&family=Cormorant+Garamond:ital,wght@0,400;0,600;1,400&display=swap"
     rel="stylesheet">
   <style>
@@ -2083,59 +2083,61 @@
 
     #loveletter .section-inner {
       min-height: 700px;
+      justify-content: center;
+    }
 
-      /* Smooth scroll performance optimizations */
-      .section {
-        transform: translateZ(0);
-        backface-visibility: hidden;
-        will-change: transform;
-        contain: layout style;
-      }
+    /* Smooth scroll performance optimizations */
+    .section {
+      transform: translateZ(0);
+      backface-visibility: hidden;
+      will-change: transform;
+      contain: layout style;
+    }
 
-      /* Prevent expensive repaints during scroll */
-      .section-media,
-      .section-overlay {
-        transform: translateZ(0);
-        will-change: auto;
-      }
+    /* Prevent expensive repaints during scroll */
+    .section-media,
+    .section-overlay {
+      transform: translateZ(0);
+      will-change: auto;
+    }
 
-      /* Isolate fixed elements from scroll */
-      #stars,
-      #scrollProgress,
-      .dot-nav,
-      #musicToggle,
-      #fullscreenBtn,
-      .floating-note,
-      .tap-music-prompt,
-      #customCursor {
-        will-change: transform;
-        contain: layout style paint;
-      }
+    /* Isolate fixed elements from scroll */
+    #stars,
+    #scrollProgress,
+    .dot-nav,
+    #musicToggle,
+    #fullscreenBtn,
+    .floating-note,
+    .tap-music-prompt,
+    #customCursor {
+      will-change: transform;
+      contain: layout style paint;
+    }
 
-      /* Force GPU acceleration on animated elements */
-      .floating-photo,
-      .fh,
-      .cursor-heart,
-      .click-sparkle,
-      .hand,
-      .paw,
-      .chat-bubble,
-      .reveal {
-        transform: translateZ(0);
-        backface-visibility: hidden;
-      }
+    /* Force GPU acceleration on animated elements */
+    .floating-photo,
+    .fh,
+    .cursor-heart,
+    .click-sparkle,
+    .hand,
+    .paw,
+    .chat-bubble,
+    .reveal {
+      transform: translateZ(0);
+      backface-visibility: hidden;
+    }
 
-      /* Prevent scroll jitter from long sections */
-      .section.compact {
-        min-height: 60vh;
-      }
+    /* Prevent scroll jitter from long sections */
+    .section.compact {
+      min-height: 60vh;
+    }
 
-      /* Smoother transitions */
-      @supports (scroll-behavior: smooth) {
-        html {
-          scroll-behavior: smooth;
-        }
+    /* Smoother transitions */
+    @supports (scroll-behavior: smooth) {
+      html {
+        scroll-behavior: smooth;
       }
+    }
   </style>
 </head>
 
