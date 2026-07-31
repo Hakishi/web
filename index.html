@@ -1062,8 +1062,9 @@
     .confess-line {
       font-family: 'Dancing Script';
       font-size: clamp(2rem, 6vw, 3.5rem);
-      color: var(--gold);
+      color: #87CEEB;
       min-height: 60px;
+      text-shadow: 0 0 20px rgba(135, 206, 235, 0.6), 0 0 40px rgba(135, 206, 235, 0.3);
     }
 
     .heart-pulse {
@@ -4308,7 +4309,7 @@ Happy Girlfriend Day, mentosss. I love you — ass tujhi and all. 😄❤️`;
       });
     })();
 
-    /* ============ SIMPLE PLASMA BURN ANIMATION ============ */
+    /* ============ SIMPLE BURN ANIMATION (WORKING) ============ */
     (function () {
       let burnStarted = false;
 
@@ -4316,23 +4317,34 @@ Happy Girlfriend Day, mentosss. I love you — ass tujhi and all. 😄❤️`;
         if (burnStarted) return;
         burnStarted = true;
 
+        console.log('🔥 Starting burn animation'); // Debug
+
         const messageBox = document.getElementById('secretMessage');
-        if (!messageBox) return;
+        if (!messageBox) {
+          console.log('❌ No secret message found');
+          return;
+        }
 
         const w = messageBox.offsetWidth;
         const h = messageBox.offsetHeight;
 
-        // Single lightweight canvas
         const canvas = document.createElement('canvas');
         canvas.className = 'burn-canvas';
+        canvas.style.cssText = `
+      position: absolute;
+      top: 0;
+      left: 0;
+      width: 100%;
+      height: 100%;
+      pointer-events: none;
+      z-index: 10;
+    `;
         canvas.width = w;
         canvas.height = h;
         messageBox.appendChild(canvas);
         const ctx = canvas.getContext('2d');
 
-        setTimeout(() => canvas.classList.add('active'), 100);
-
-        const burnDuration = 8000; // Faster: 8 seconds (was 18s)
+        const burnDuration = 8000;
         const startTime = performance.now();
         const embers = [];
 
@@ -4343,20 +4355,15 @@ Happy Girlfriend Day, mentosss. I love you — ass tujhi and all. 😄❤️`;
 
           ctx.clearRect(0, 0, w, h);
 
-          // PLASMA BURN — diagonal burn line from top-left with wavy edge
           const maxDist = Math.hypot(w, h);
-          const burnDist = progress * maxDist * 1.15;
+          const burnDist = progress * maxDist * 1.2;
 
-          // Save context for clipping
+          // Draw burn area with wavy edge
           ctx.save();
-
-          // Create the burn shape as a clipping path (fast!)
           ctx.beginPath();
-          // Sample points along the burn front for wavy edge
-          const numPoints = 40;
           ctx.moveTo(0, 0);
 
-          // Top edge of burn
+          const numPoints = 40;
           for (let i = 0; i <= numPoints; i++) {
             const angle = (i / numPoints) * Math.PI / 2;
             const wave = Math.sin(angle * 8 + t * 2) * 15 + Math.cos(angle * 12 - t * 1.5) * 8;
@@ -4365,29 +4372,31 @@ Happy Girlfriend Day, mentosss. I love you — ass tujhi and all. 😄❤️`;
             const y = Math.sin(angle) * r;
             ctx.lineTo(x, y);
           }
+
+          // Close the shape back to origin
+          ctx.lineTo(0, h);
+          ctx.lineTo(0, 0);
           ctx.closePath();
           ctx.clip();
 
-          // Fill the entire burn area with layered plasma effect
-
-          // Layer 1: Deep black char base
+          // Fill with black char
           ctx.fillStyle = 'rgb(15, 8, 3)';
           ctx.fillRect(0, 0, w, h);
 
-          // Layer 2: Plasma glow near the edge only (radial gradient)
+          // Add glow near edge
           const grad = ctx.createRadialGradient(0, 0, burnDist * 0.7, 0, 0, burnDist);
           grad.addColorStop(0, 'rgba(15, 8, 3, 0)');
-          grad.addColorStop(0.6, 'rgba(80, 30, 10, 0.6)');
-          grad.addColorStop(0.85, 'rgba(220, 80, 20, 0.7)');
-          grad.addColorStop(1, 'rgba(255, 180, 60, 0.9)');
+          grad.addColorStop(0.7, 'rgba(80, 30, 10, 0.7)');
+          grad.addColorStop(0.9, 'rgba(220, 80, 20, 0.8)');
+          grad.addColorStop(1, 'rgba(255, 180, 60, 0.95)');
           ctx.fillStyle = grad;
           ctx.fillRect(0, 0, w, h);
 
           ctx.restore();
 
-          // Draw flickering flame edge (outside clip)
+          // Flame highlights at edge
           ctx.globalCompositeOperation = 'screen';
-          for (let i = 0; i < 25; i++) {
+          for (let i = 0; i < 20; i++) {
             const angle = Math.random() * Math.PI / 2;
             const r = burnDist * (0.9 + Math.random() * 0.15);
             const fx = Math.cos(angle) * r;
@@ -4395,7 +4404,7 @@ Happy Girlfriend Day, mentosss. I love you — ass tujhi and all. 😄❤️`;
 
             if (fx >= 0 && fx <= w && fy >= 0 && fy <= h) {
               const size = 12 + Math.random() * 15;
-              const intensity = 0.4 + Math.random() * 0.4;
+              const intensity = 0.5 + Math.random() * 0.3;
               const flameGrad = ctx.createRadialGradient(fx, fy, 0, fx, fy, size);
               flameGrad.addColorStop(0, `rgba(255, 220, 130, ${intensity})`);
               flameGrad.addColorStop(0.4, `rgba(255, 130, 30, ${intensity * 0.6})`);
@@ -4408,34 +4417,28 @@ Happy Girlfriend Day, mentosss. I love you — ass tujhi and all. 😄❤️`;
           }
           ctx.globalCompositeOperation = 'source-over';
 
-          // Emit embers from burn edge
-          if (progress < 0.95 && Math.random() < 0.6) {
+          // Embers
+          if (progress < 0.95 && Math.random() < 0.7) {
             const angle = Math.random() * Math.PI / 2;
             const r = burnDist * 0.9;
-            const ex = Math.cos(angle) * r;
-            const ey = Math.sin(angle) * r;
-            if (ex >= 0 && ex <= w && ey >= 0 && ey <= h) {
-              embers.push({
-                x: ex, y: ey,
-                vx: (Math.random() - 0.3) * 1.5,
-                vy: -Math.random() * 2.5 - 0.5,
-                life: 1,
-                size: 0.8 + Math.random() * 1.5
-              });
-            }
+            embers.push({
+              x: Math.cos(angle) * r,
+              y: Math.sin(angle) * r,
+              vx: (Math.random() - 0.3) * 1.5,
+              vy: -Math.random() * 2.5 - 0.5,
+              life: 1,
+              size: 0.8 + Math.random() * 1.5
+            });
           }
 
-          // Draw embers (simple, lightweight)
           for (let i = embers.length - 1; i >= 0; i--) {
             const e = embers[i];
             e.life -= 0.02;
             e.x += e.vx;
             e.y += e.vy;
             e.vy += 0.04;
-
             if (e.life <= 0) { embers.splice(i, 1); continue; }
 
-            // Simple ember with glow
             const glowGrad = ctx.createRadialGradient(e.x, e.y, 0, e.x, e.y, e.size * 3);
             glowGrad.addColorStop(0, `rgba(255, 200, 100, ${e.life * 0.7})`);
             glowGrad.addColorStop(1, 'rgba(255, 100, 20, 0)');
@@ -4444,14 +4447,13 @@ Happy Girlfriend Day, mentosss. I love you — ass tujhi and all. 😄❤️`;
             ctx.arc(e.x, e.y, e.size * 3, 0, Math.PI * 2);
             ctx.fill();
 
-            // Bright core
             ctx.fillStyle = `rgba(255, ${150 + e.life * 100}, 50, ${e.life * 0.95})`;
             ctx.beginPath();
             ctx.arc(e.x, e.y, e.size * e.life, 0, Math.PI * 2);
             ctx.fill();
           }
 
-          // Progressive darkening & slight shrinking of note
+          // Darken and shrink note
           messageBox.style.filter = `brightness(${1 - progress * 0.85}) contrast(${1 + progress * 0.4})`;
           messageBox.style.transform = `scale(${1 - progress * 0.04})`;
           messageBox.style.transformOrigin = 'top left';
@@ -4459,7 +4461,7 @@ Happy Girlfriend Day, mentosss. I love you — ass tujhi and all. 😄❤️`;
           if (progress < 1 || embers.length > 0) {
             requestAnimationFrame(drawBurn);
           } else {
-            // FASTER final transition (was 3500ms, now 1500ms)
+            console.log('🔥 Burn complete');
             setTimeout(() => {
               messageBox.style.transition = 'opacity 1.2s ease, transform 1.2s ease';
               messageBox.style.opacity = '0';
@@ -4474,7 +4476,6 @@ Happy Girlfriend Day, mentosss. I love you — ass tujhi and all. 😄❤️`;
                 }
               }
 
-              // Faster constellation reveal (was 3500ms, now 1500ms)
               setTimeout(() => {
                 if (typeof window.reopenConstellationPermanent === 'function') {
                   document.body.classList.remove('constellation-open');
@@ -4484,23 +4485,23 @@ Happy Girlfriend Day, mentosss. I love you — ass tujhi and all. 😄❤️`;
                   window.reopenConstellationPermanent();
                 }
               }, 1500);
-            }, 300); // Was 500
+            }, 300);
           }
         }
         requestAnimationFrame(drawBurn);
       }
 
-      // Watch for the secret message to become visible
+      // Watch for the secret message to appear
       const checkInterval = setInterval(() => {
         const msg = document.getElementById('secretMessage');
         if (msg && msg.classList.contains('show')) {
-          const textLength = 500;
-          const typewriterSpeed = 18;
-          const totalTypewriterTime = textLength * typewriterSpeed;
+          console.log('✅ Secret message visible, waiting for burn...');
 
+          // Wait for typewriter (~9 seconds) + 5 seconds after
           setTimeout(() => {
-            setTimeout(startBurning, 5000);
-          }, totalTypewriterTime);
+            console.log('🔥 Triggering burn now');
+            startBurning();
+          }, 14000); // 14 seconds after showing = enough for text to finish + 5s pause
 
           clearInterval(checkInterval);
         }
