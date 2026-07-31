@@ -2,594 +2,378 @@
 <html lang="en">
 <head>
 <meta charset="UTF-8">
-<title>Surprise Demos — Pick Your Favorite</title>
+<title>Constellation Demo</title>
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <style>
-  * { margin: 0; padding: 0; box-sizing: border-box; font-family: 'Poppins', 'Segoe UI', sans-serif; }
+  * { margin: 0; padding: 0; box-sizing: border-box; font-family: 'Poppins', sans-serif; }
   body { background: linear-gradient(135deg, #06071a, #0d1128); color: #fff; min-height: 100vh; overflow: hidden; }
   
   .container { position: relative; z-index: 10; padding: 40px 20px; text-align: center; }
   h1 { color: #ff6fa5; margin-bottom: 10px; font-size: 2rem; }
-  .subtitle { color: #aaa; margin-bottom: 30px; }
+  .subtitle { color: #aaa; margin-bottom: 30px; font-size: 14px; }
   
-  .demo-buttons { display: flex; flex-wrap: wrap; justify-content: center; gap: 15px; margin-bottom: 20px; }
-  .demo-btn { padding: 16px 26px; border-radius: 50px; border: 2px solid #ff6fa5; background: transparent; color: #fff; font-size: 15px; cursor: pointer; transition: 0.3s; font-weight: 600; }
+  .demo-btn { padding: 16px 30px; border-radius: 50px; border: 2px solid #ff6fa5; background: transparent; color: #fff; font-size: 15px; cursor: pointer; transition: 0.3s; font-weight: 600; margin: 5px; }
   .demo-btn:hover { background: #ff6fa5; transform: translateY(-3px); box-shadow: 0 10px 30px rgba(255,111,165,0.4); }
   .reset-btn { padding: 12px 24px; border-radius: 30px; border: 2px solid #38bdf8; background: transparent; color: #38bdf8; cursor: pointer; margin-top: 10px; }
   .reset-btn:hover { background: #38bdf8; color: #000; }
   
   #starCanvas { position: fixed; inset: 0; z-index: 1; }
   
-  /* ============ PHOTO RAIN ============ */
-  .photo-rain { position: fixed; inset: 0; pointer-events: none; z-index: 100; overflow: hidden; }
-  .falling-photo { position: absolute; width: 100px; height: 120px; background: #fff; padding: 8px 8px 20px 8px; border-radius: 4px; box-shadow: 0 8px 25px rgba(0,0,0,0.4); animation: fallPhoto linear forwards; }
-  .falling-photo img { width: 100%; height: 100%; object-fit: cover; display: block; }
-  @keyframes fallPhoto { 
-    0% { transform: translateY(-150px) rotate(var(--startRot, 0deg)); }
-    100% { transform: translateY(110vh) rotate(var(--endRot, 15deg)); }
-  }
-  
-  /* ============ HEART GAME ============ */
-  .game-overlay { position: fixed; inset: 0; z-index: 100; pointer-events: none; }
-  .game-overlay.active { pointer-events: auto; }
-  .game-counter { position: fixed; top: 20px; left: 50%; transform: translateX(-50%); background: rgba(255,111,165,0.95); color: #fff; padding: 12px 30px; border-radius: 30px; font-size: 20px; font-weight: bold; z-index: 200; box-shadow: 0 10px 30px rgba(0,0,0,0.4); }
-  .game-heart { position: absolute; font-size: 40px; cursor: pointer; animation: floatUp linear forwards; user-select: none; }
-  @keyframes floatUp {
-    0% { transform: translateY(110vh) scale(0.5); opacity: 0; }
-    10% { opacity: 1; }
-    90% { opacity: 1; }
-    100% { transform: translateY(-150px) scale(1); opacity: 0; }
-  }
-  .game-heart.popped { animation: popHeart 0.5s forwards; pointer-events: none; }
-  @keyframes popHeart {
-    0% { transform: scale(1); }
-    50% { transform: scale(1.8); }
-    100% { transform: scale(0); opacity: 0; }
-  }
-  .game-win { position: fixed; top: 50%; left: 50%; transform: translate(-50%, -50%) scale(0); background: linear-gradient(135deg, #ff6fa5, #ffd166); padding: 40px 50px; border-radius: 20px; text-align: center; z-index: 300; box-shadow: 0 20px 60px rgba(0,0,0,0.5); transition: transform 0.6s cubic-bezier(0.34, 1.56, 0.64, 1); }
-  .game-win.show { transform: translate(-50%, -50%) scale(1); }
-  .game-win h2 { font-size: 2rem; color: #fff; margin-bottom: 10px; }
-  .game-win p { color: #fff; font-size: 1.1rem; }
-  
-  /* ============ FORTUNE COOKIE ============ */
-  .cookie-overlay { position: fixed; inset: 0; background: rgba(0,0,0,0.85); z-index: 100; display: none; align-items: center; justify-content: center; flex-direction: column; gap: 30px; }
-  .cookie-overlay.show { display: flex; }
-  .cookie { font-size: 120px; cursor: pointer; transition: transform 0.3s; user-select: none; filter: drop-shadow(0 10px 30px rgba(255,200,100,0.6)); }
-  .cookie:hover { transform: scale(1.1); }
-  .cookie.cracking { animation: crack 0.6s forwards; }
-  @keyframes crack {
-    0% { transform: scale(1) rotate(0deg); }
-    25% { transform: scale(1.2) rotate(-8deg); }
-    50% { transform: scale(1.3) rotate(8deg); }
-    75% { transform: scale(1.4) rotate(-4deg); }
-    100% { transform: scale(0) rotate(0deg); opacity: 0; }
-  }
-  .cookie-instruction { color: #ffd166; font-size: 18px; }
-  .fortune-paper { background: #fdf4e3; color: #5a3a44; padding: 30px 40px; border-radius: 8px; max-width: 400px; text-align: center; font-family: 'Dancing Script', cursive; font-size: 1.6rem; line-height: 1.5; box-shadow: 0 20px 60px rgba(0,0,0,0.5); opacity: 0; transform: translateY(30px); transition: 0.8s ease; }
-  .fortune-paper.show { opacity: 1; transform: translateY(0); }
-  .close-fortune { padding: 10px 25px; border-radius: 25px; border: 2px solid #fff; background: transparent; color: #fff; cursor: pointer; margin-top: 10px; opacity: 0; transition: opacity 0.5s 1s; }
-  .close-fortune.show { opacity: 1; }
+  .final-text { position: fixed; top: 50%; left: 50%; transform: translate(-50%, -50%); font-family: 'Dancing Script', cursive; font-size: clamp(1.5rem, 4vw, 2.5rem); color: rgba(255, 209, 102, 0.9); text-shadow: 0 0 20px #ffd166, 0 0 40px rgba(255, 209, 102, 0.5); opacity: 0; transition: opacity 2s ease; pointer-events: none; z-index: 5; text-align: center; }
+  .final-text.show { opacity: 1; }
 </style>
+<link href="https://fonts.googleapis.com/css2?family=Dancing+Script:wght@700&display=swap" rel="stylesheet">
 </head>
 <body>
 
 <canvas id="starCanvas"></canvas>
 
 <div class="container">
-  <h1>🎁 Surprise Demos</h1>
-  <p class="subtitle">Tap each to preview. Refresh to reset.</p>
-  <div class="demo-buttons">
-    <button class="demo-btn" onclick="demo1_constellation()">1️⃣ Constellation Heart</button>
-    <button class="demo-btn" onclick="demo2_photoRain()">2️⃣ Photo Rain</button>
-    <button class="demo-btn" onclick="demo3_heartGame()">3️⃣ Heart Mini Game</button>
-    <button class="demo-btn" onclick="demo4_fortuneCookie()">4️⃣ Fortune Cookie</button>
-  </div>
-  <button class="reset-btn" onclick="location.reload()">🔄 Reset All</button>
+  <h1>🌌 Constellation Preview</h1>
+  <p class="subtitle">The background stars are strategically placed. Tap to reveal.</p>
+  <button class="demo-btn" onclick="revealConstellation()">✨ Reveal Constellation</button>
+  <button class="reset-btn" onclick="location.reload()">🔄 Reset</button>
 </div>
 
-<!-- Photo rain container -->
-<div id="photoRain" class="photo-rain"></div>
-
-<!-- Heart game -->
-<div id="gameOverlay" class="game-overlay"></div>
-<div id="gameWin" class="game-win">
-  <h2>💕 You Win!</h2>
-  <p>You caught 10 hearts,<br>but you've had mine since day 1.</p>
-</div>
-
-<!-- Fortune cookie -->
-<div id="cookieOverlay" class="cookie-overlay">
-  <p class="cookie-instruction">Tap the cookie to crack it open ✨</p>
-  <div class="cookie" id="cookie" onclick="crackCookie()">🥠</div>
-  <div class="fortune-paper" id="fortunePaper">
-    You are loved beyond measure.<br>
-    Especially by Gojo. 💕
-  </div>
-  <button class="close-fortune" id="closeFortune" onclick="closeFortune()">Close</button>
-</div>
+<div id="finalText" class="final-text">— Written in the stars —</div>
 
 <script>
-// ============ STARFIELD ============
 const canvas = document.getElementById('starCanvas');
 const ctx = canvas.getContext('2d');
-function resizeCanvas() { canvas.width = innerWidth; canvas.height = innerHeight; }
-resizeCanvas();
-window.addEventListener('resize', resizeCanvas);
 
-let stars = [];
-function initStars() {
-  stars = Array.from({length: 250}, () => ({
-    x: Math.random() * canvas.width,
-    y: Math.random() * canvas.height,
-    r: Math.random() * 1.5 + 0.3,
-    o: Math.random() * 10,
-    s: Math.random() * 0.02 + 0.005,
-    highlighted: false,
-    glowIntensity: 0
-  }));
-}
-initStars();
-
-// Constellation state
-let constellationActive = false;
-
-function drawStars() {
-  ctx.clearRect(0, 0, canvas.width, canvas.height);
-  
-  // Draw constellation lines
-  constellationLines.forEach(line => {
-    if (line.progress > 0) {
-      const dx = line.to.x - line.from.x;
-      const dy = line.to.y - line.from.y;
-      const currentX = line.from.x + dx * line.progress;
-      const currentY = line.from.y + dy * line.progress;
-      
-      ctx.beginPath();
-      ctx.moveTo(line.from.x, line.from.y);
-      ctx.lineTo(currentX, currentY);
-      const gradient = ctx.createLinearGradient(line.from.x, line.from.y, currentX, currentY);
-      gradient.addColorStop(0, 'rgba(255, 111, 165, 0.9)');
-      gradient.addColorStop(1, 'rgba(255, 209, 102, 0.9)');
-      ctx.strokeStyle = gradient;
-      ctx.lineWidth = 1.5;
-      ctx.shadowBlur = 12;
-      ctx.shadowColor = '#ff6fa5';
-      ctx.stroke();
-      ctx.shadowBlur = 0;
-    }
-  });
-  
-  // Draw stars
-  stars.forEach(st => {
-    if (st.highlighted) {
-      st.glowIntensity = Math.min(st.glowIntensity + 0.03, 1);
-      ctx.beginPath();
-      ctx.arc(st.x, st.y, 3 + st.glowIntensity * 1.5, 0, 7);
-      ctx.fillStyle = `rgba(255, 209, 102, ${0.8 + st.glowIntensity * 0.2})`;
-      ctx.shadowBlur = 20;
-      ctx.shadowColor = '#ffd166';
-      ctx.fill();
-      ctx.shadowBlur = 0;
-    } else {
-      st.o += st.s;
-      const op = Math.abs(Math.sin(st.o));
-      ctx.beginPath();
-      ctx.arc(st.x, st.y, st.r, 0, 7);
-      ctx.fillStyle = `rgba(255,255,255,${op})`;
-      ctx.fill();
-    }
-  });
-  requestAnimationFrame(drawStars);
+function resizeCanvas() { 
+  canvas.width = innerWidth; 
+  canvas.height = innerHeight; 
+  layoutStars();
 }
 
-
-// ============ 1. CONSTELLATION (PROFESSIONAL VERSION) ============
-
-let constellationStars = [];
-let constellationLinesNew = [];
-
-// Extract points along text/shape outlines using a hidden canvas
-function extractPointsFromText(text, fontSize, fontFamily = 'bold Arial') {
-  const hiddenCanvas = document.createElement('canvas');
-  const hCtx = hiddenCanvas.getContext('2d');
-  hiddenCanvas.width = 2000;
-  hiddenCanvas.height = fontSize * 2;
-  
-  hCtx.font = `${fontSize}px ${fontFamily}`;
-  hCtx.fillStyle = '#fff';
-  hCtx.textBaseline = 'middle';
-  
-  const metrics = hCtx.measureText(text);
-  const textWidth = Math.ceil(metrics.width);
-  hiddenCanvas.width = textWidth + 20;
-  
-  hCtx.font = `${fontSize}px ${fontFamily}`;
-  hCtx.fillStyle = '#fff';
-  hCtx.textBaseline = 'middle';
-  hCtx.fillText(text, 10, fontSize);
-  
-  const imageData = hCtx.getImageData(0, 0, hiddenCanvas.width, hiddenCanvas.height);
-  const points = [];
-  const step = Math.max(4, Math.floor(fontSize / 20)); // Density of stars
-  
-  for (let y = 0; y < hiddenCanvas.height; y += step) {
-    for (let x = 0; x < hiddenCanvas.width; x += step) {
-      const idx = (y * hiddenCanvas.width + x) * 4;
-      if (imageData.data[idx + 3] > 128) { // alpha channel
-        points.push({ x, y, width: hiddenCanvas.width, height: hiddenCanvas.height });
-      }
-    }
+// ============ LETTER DEFINITIONS (using minimal dots for readability) ============
+// Each letter is a stroke path: [[x, y], ...] where x, y are relative 0-1
+const letters = {
+  K: {
+    dots: [[0, 0], [0, 0.5], [0, 1], [0.7, 0], [0.35, 0.5], [0.7, 1]],
+    connections: [[0, 1], [1, 2], [3, 4], [4, 5], [1, 4]]
+  },
+  A: {
+    dots: [[0, 1], [0.35, 0], [0.7, 1], [0.15, 0.6], [0.55, 0.6]],
+    connections: [[0, 1], [1, 2], [3, 4]]
+  },
+  L: {
+    dots: [[0, 0], [0, 0.5], [0, 1], [0.7, 1]],
+    connections: [[0, 1], [1, 2], [2, 3]]
+  },
+  U: {
+    dots: [[0, 0], [0, 0.7], [0.35, 1], [0.7, 0.7], [0.7, 0]],
+    connections: [[0, 1], [1, 2], [2, 3], [3, 4]]
+  },
+  G: {
+    dots: [[0.7, 0.15], [0.35, 0], [0, 0.3], [0, 0.7], [0.35, 1], [0.7, 0.85], [0.7, 0.55], [0.4, 0.55]],
+    connections: [[0, 1], [1, 2], [2, 3], [3, 4], [4, 5], [5, 6], [6, 7]]
+  },
+  O: {
+    dots: [[0.35, 0], [0, 0.3], [0, 0.7], [0.35, 1], [0.7, 0.7], [0.7, 0.3]],
+    connections: [[0, 1], [1, 2], [2, 3], [3, 4], [4, 5], [5, 0]]
+  },
+  J: {
+    dots: [[0.3, 0], [0.7, 0], [0.7, 0.7], [0.35, 1], [0, 0.75]],
+    connections: [[0, 1], [1, 2], [2, 3], [3, 4]]
   }
-  
-  return { points, width: hiddenCanvas.width, height: hiddenCanvas.height };
-}
+};
 
-// Extract only OUTLINE points (edge detection) for cleaner look
-function extractOutlinePoints(text, fontSize, fontFamily = 'bold Arial') {
-  const hiddenCanvas = document.createElement('canvas');
-  const hCtx = hiddenCanvas.getContext('2d');
-  
-  hCtx.font = `${fontSize}px ${fontFamily}`;
-  const metrics = hCtx.measureText(text);
-  const textWidth = Math.ceil(metrics.width);
-  
-  hiddenCanvas.width = textWidth + 40;
-  hiddenCanvas.height = fontSize * 1.5;
-  
-  hCtx.font = `${fontSize}px ${fontFamily}`;
-  hCtx.fillStyle = '#fff';
-  hCtx.textBaseline = 'middle';
-  hCtx.fillText(text, 20, hiddenCanvas.height / 2);
-  
-  const imageData = hCtx.getImageData(0, 0, hiddenCanvas.width, hiddenCanvas.height);
-  const data = imageData.data;
-  const w = hiddenCanvas.width;
-  const h = hiddenCanvas.height;
-  
-  // Find outline (pixels that are white AND have at least one transparent neighbor)
-  const outlinePoints = [];
-  for (let y = 1; y < h - 1; y++) {
-    for (let x = 1; x < w - 1; x++) {
-      const idx = (y * w + x) * 4 + 3;
-      if (data[idx] > 128) {
-        // Check neighbors for transparency (edge detection)
-        const neighbors = [
-          data[((y-1) * w + x) * 4 + 3],
-          data[((y+1) * w + x) * 4 + 3],
-          data[(y * w + (x-1)) * 4 + 3],
-          data[(y * w + (x+1)) * 4 + 3]
-        ];
-        if (neighbors.some(n => n < 128)) {
-          outlinePoints.push({ x, y });
-        }
-      }
-    }
-  }
-  
-  // Sample points to reduce density
-  const targetPoints = 80; // Total stars for the whole text
-  const step = Math.max(1, Math.floor(outlinePoints.length / targetPoints));
-  const sampled = [];
-  for (let i = 0; i < outlinePoints.length; i += step) {
-    sampled.push(outlinePoints[i]);
-  }
-  
-  return { points: sampled, width: w, height: h };
-}
+// ============ STARS ============
+// Background stars (random, non-constellation)
+let bgStars = [];
 
-// Extract heart outline points
-function extractHeartOutlinePoints(size, numPoints = 30) {
-  const points = [];
-  for (let i = 0; i < numPoints; i++) {
-    const t = (i / numPoints) * Math.PI * 2;
-    const x = 16 * Math.pow(Math.sin(t), 3);
-    const y = -(13 * Math.cos(t) - 5 * Math.cos(2*t) - 2 * Math.cos(3*t) - Math.cos(4*t));
-    points.push({ x: x * size, y: y * size });
-  }
-  return points;
-}
+// Constellation stars (positioned to form KALU + GOJO + Heart)
+let constellationDots = []; // Each dot: {x, y, letter, group, isRevealed, twinkleO, twinkleS}
+let constellationConnections = []; // Each: {from, to, progress, isRevealed}
 
-// Connect nearest neighbors to form nice constellation lines
-function connectNearestNeighbors(dots, maxConnections = 2, maxDistance = 100) {
-  const lines = [];
-  const connectionCount = new Map();
-  dots.forEach(d => connectionCount.set(d, 0));
-  
-  // Sort dots by x then y for natural reading order
-  const sorted = [...dots].sort((a, b) => a.x - b.x || a.y - b.y);
-  
-  sorted.forEach((dot, i) => {
-    if (connectionCount.get(dot) >= maxConnections) return;
-    
-    // Find nearest neighbors
-    const candidates = sorted
-      .filter(d => d !== dot && connectionCount.get(d) < maxConnections)
-      .map(d => ({ dot: d, dist: Math.hypot(d.x - dot.x, d.y - dot.y) }))
-      .filter(c => c.dist < maxDistance)
-      .sort((a, b) => a.dist - b.dist)
-      .slice(0, maxConnections - connectionCount.get(dot));
-    
-    candidates.forEach(c => {
-      lines.push({ from: dot, to: c.dot, progress: 0 });
-      connectionCount.set(dot, connectionCount.get(dot) + 1);
-      connectionCount.set(c.dot, connectionCount.get(c.dot) + 1);
-    });
-  });
-  
-  return lines;
-}
-
-// Sequential connection for heart (each point to next in circle)
-function connectSequential(dots) {
-  const lines = [];
-  for (let i = 0; i < dots.length; i++) {
-    lines.push({ from: dots[i], to: dots[(i + 1) % dots.length], progress: 0 });
-  }
-  return lines;
-}
-
-// New drawing loop
-function drawStarsNew() {
-  ctx.clearRect(0, 0, canvas.width, canvas.height);
-  
-  // Background stars
-  stars.forEach(st => {
-    st.o += st.s;
-    const op = Math.abs(Math.sin(st.o)) * 0.5;
-    ctx.beginPath();
-    ctx.arc(st.x, st.y, st.r, 0, 7);
-    ctx.fillStyle = `rgba(255,255,255,${op})`;
-    ctx.fill();
-  });
-  
-  // Constellation lines
-  constellationLinesNew.forEach(line => {
-    if (line.progress > 0) {
-      const dx = line.to.x - line.from.x;
-      const dy = line.to.y - line.from.y;
-      const currentX = line.from.x + dx * line.progress;
-      const currentY = line.from.y + dy * line.progress;
-      
-      ctx.beginPath();
-      ctx.moveTo(line.from.x, line.from.y);
-      ctx.lineTo(currentX, currentY);
-      ctx.strokeStyle = 'rgba(255, 209, 102, 0.7)';
-      ctx.lineWidth = 1;
-      ctx.shadowBlur = 8;
-      ctx.shadowColor = '#ffd166';
-      ctx.stroke();
-      ctx.shadowBlur = 0;
-    }
-  });
-  
-  // Constellation stars
-  constellationStars.forEach(dot => {
-    if (dot.fadeIn === undefined) dot.fadeIn = 0;
-    if (dot.fadeIn < 1) dot.fadeIn = Math.min(dot.fadeIn + 0.05, 1);
-    
-    // Outer glow
-    ctx.beginPath();
-    ctx.arc(dot.x, dot.y, 8 * dot.fadeIn, 0, 7);
-    const glowGradient = ctx.createRadialGradient(dot.x, dot.y, 0, dot.x, dot.y, 8);
-    glowGradient.addColorStop(0, `rgba(255, 209, 102, ${0.7 * dot.fadeIn})`);
-    glowGradient.addColorStop(1, 'rgba(255, 209, 102, 0)');
-    ctx.fillStyle = glowGradient;
-    ctx.fill();
-    
-    // Inner star
-    ctx.beginPath();
-    ctx.arc(dot.x, dot.y, 2 * dot.fadeIn, 0, 7);
-    ctx.fillStyle = `rgba(255, 255, 255, ${dot.fadeIn})`;
-    ctx.shadowBlur = 15;
-    ctx.shadowColor = '#ffd166';
-    ctx.fill();
-    ctx.shadowBlur = 0;
-  });
-  
-  requestAnimationFrame(drawStarsNew);
-}
-
-let drawStarsStarted = false;
-function startNewDrawLoop() {
-  if (drawStarsStarted) return;
-  drawStarsStarted = true;
-  drawStarsNew();
-}
-startNewDrawLoop();
-
-function animateGroup(items, duration = 1500, propName = 'progress', callback) {
-  const startTime = performance.now();
-  function frame(now) {
-    const elapsed = now - startTime;
-    const overallProgress = Math.min(elapsed / duration, 1);
-    
-    items.forEach((item, i) => {
-      const itemStart = (i / items.length) * 0.7;
-      const itemEnd = itemStart + 0.3;
-      const itemProgress = Math.max(0, Math.min(1, (overallProgress - itemStart) / (itemEnd - itemStart)));
-      item[propName] = itemProgress;
-    });
-    
-    if (overallProgress < 1) requestAnimationFrame(frame);
-    else if (callback) callback();
-  }
-  requestAnimationFrame(frame);
-}
-
-function demo1_constellation() {
-  // Reset
-  constellationStars = [];
-  constellationLinesNew = [];
-  
+function layoutStars() {
   const w = canvas.width;
   const h = canvas.height;
   const centerX = w / 2;
   const centerY = h / 2;
   
-  const fontSize = Math.min(w * 0.12, h * 0.14, 130);
+  // Letter sizing
+  const letterHeight = Math.min(w * 0.09, h * 0.13, 90);
+  const letterWidth = letterHeight * 0.7;
+  const spacing = letterWidth * 0.55;
   
-  // Extract KALU outline
-  const kaluData = extractOutlinePoints('KALU', fontSize, 'bold Arial');
-  const kaluDots = kaluData.points.map(p => ({
-    x: centerX - kaluData.width / 2 + p.x,
-    y: centerY - fontSize - 20 + p.y,
-    fadeIn: 0
-  }));
+  constellationDots = [];
+  constellationConnections = [];
   
-  // Extract GOJO outline
-  const gojoData = extractOutlinePoints('GOJO', fontSize, 'bold Arial');
-  const gojoDots = gojoData.points.map(p => ({
-    x: centerX - gojoData.width / 2 + p.x,
-    y: centerY + 20 + p.y,
-    fadeIn: 0
-  }));
+  // Build KALU (upper)
+  const kaluWidth = 4 * letterWidth + 3 * spacing;
+  const kaluStartX = centerX - kaluWidth / 2;
+  const kaluY = centerY - letterHeight - 50;
+  const kaluLetters = ['K', 'A', 'L', 'U'];
   
-  // Show KALU stars first
-  constellationStars = kaluDots;
+  let kaluDotIndex = 0;
+  kaluLetters.forEach((letter, letterIdx) => {
+    const def = letters[letter];
+    const offsetX = kaluStartX + letterIdx * (letterWidth + spacing);
+    const startIdx = kaluDotIndex;
+    
+    def.dots.forEach(([dx, dy]) => {
+      constellationDots.push({
+        x: offsetX + dx * letterWidth,
+        y: kaluY + dy * letterHeight,
+        group: 'kalu',
+        isRevealed: false,
+        twinkleO: Math.random() * 10,
+        twinkleS: Math.random() * 0.02 + 0.005
+      });
+      kaluDotIndex++;
+    });
+    
+    def.connections.forEach(([a, b]) => {
+      constellationConnections.push({
+        from: constellationDots[startIdx + a],
+        to: constellationDots[startIdx + b],
+        progress: 0,
+        group: 'kalu'
+      });
+    });
+  });
   
-  setTimeout(() => {
-    // Connect KALU stars
-    const kaluLines = connectNearestNeighbors(kaluDots, 2, fontSize * 0.35);
-    constellationLinesNew = kaluLines;
-    animateGroup(kaluLines, 1800, 'progress', () => {
+  // Build GOJO (lower)
+  const gojoWidth = 4 * letterWidth + 3 * spacing;
+  const gojoStartX = centerX - gojoWidth / 2;
+  const gojoY = centerY + 50;
+  const gojoLetters = ['G', 'O', 'J', 'O'];
+  
+  let gojoDotIndex = constellationDots.length;
+  gojoLetters.forEach((letter, letterIdx) => {
+    const def = letters[letter];
+    const offsetX = gojoStartX + letterIdx * (letterWidth + spacing);
+    const startIdx = gojoDotIndex;
+    
+    def.dots.forEach(([dx, dy]) => {
+      constellationDots.push({
+        x: offsetX + dx * letterWidth,
+        y: gojoY + dy * letterHeight,
+        group: 'gojo',
+        isRevealed: false,
+        twinkleO: Math.random() * 10,
+        twinkleS: Math.random() * 0.02 + 0.005
+      });
+      gojoDotIndex++;
+    });
+    
+    def.connections.forEach(([a, b]) => {
+      constellationConnections.push({
+        from: constellationDots[startIdx + a],
+        to: constellationDots[startIdx + b],
+        progress: 0,
+        group: 'gojo'
+      });
+    });
+  });
+  
+  // Build Heart (surrounding both names)
+  const heartRadius = Math.min(kaluWidth, gojoWidth) * 0.75;
+  const heartCenterX = centerX;
+  const heartCenterY = centerY + 20;
+  const numHeartPoints = 16;
+  const heartStartIdx = constellationDots.length;
+  
+  for (let i = 0; i < numHeartPoints; i++) {
+    const t = (i / numHeartPoints) * Math.PI * 2;
+    const hx = 16 * Math.pow(Math.sin(t), 3);
+    const hy = -(13 * Math.cos(t) - 5 * Math.cos(2*t) - 2 * Math.cos(3*t) - Math.cos(4*t));
+    const scale = heartRadius / 32;
+    constellationDots.push({
+      x: heartCenterX + hx * scale,
+      y: heartCenterY + hy * scale,
+      group: 'heart',
+      isRevealed: false,
+      twinkleO: Math.random() * 10,
+      twinkleS: Math.random() * 0.02 + 0.005
+    });
+  }
+  
+  for (let i = 0; i < numHeartPoints; i++) {
+    constellationConnections.push({
+      from: constellationDots[heartStartIdx + i],
+      to: constellationDots[heartStartIdx + ((i + 1) % numHeartPoints)],
+      progress: 0,
+      group: 'heart'
+    });
+  }
+  
+  // Now generate random background stars, AVOIDING constellation dot positions
+  bgStars = [];
+  const numBgStars = 120; // Fewer stars for cleaner look
+  const minDist = 30; // Minimum distance from constellation dots
+  
+  let attempts = 0;
+  while (bgStars.length < numBgStars && attempts < numBgStars * 5) {
+    attempts++;
+    const x = Math.random() * w;
+    const y = Math.random() * h;
+    
+    // Check distance from constellation dots
+    const tooClose = constellationDots.some(d => Math.hypot(d.x - x, d.y - y) < minDist);
+    if (tooClose) continue;
+    
+    bgStars.push({
+      x, y,
+      r: Math.random() * 1.2 + 0.3,
+      o: Math.random() * 10,
+      s: Math.random() * 0.02 + 0.005
+    });
+  }
+}
+
+resizeCanvas();
+window.addEventListener('resize', resizeCanvas);
+
+// ============ ANIMATION LOOP ============
+function draw() {
+  ctx.clearRect(0, 0, canvas.width, canvas.height);
+  
+  // 1. Draw background stars (always twinkling)
+  bgStars.forEach(st => {
+    st.o += st.s;
+    const op = Math.abs(Math.sin(st.o)) * 0.6;
+    ctx.beginPath();
+    ctx.arc(st.x, st.y, st.r, 0, 7);
+    ctx.fillStyle = `rgba(255, 255, 255, ${op})`;
+    ctx.fill();
+  });
+  
+  // 2. Draw constellation dots (they twinkle like background stars until revealed)
+  constellationDots.forEach(dot => {
+    dot.twinkleO += dot.twinkleS;
+    
+    if (dot.isRevealed) {
+      // Glowing revealed star
+      const glowGradient = ctx.createRadialGradient(dot.x, dot.y, 0, dot.x, dot.y, 12);
+      glowGradient.addColorStop(0, 'rgba(255, 209, 102, 0.9)');
+      glowGradient.addColorStop(0.5, 'rgba(255, 209, 102, 0.3)');
+      glowGradient.addColorStop(1, 'rgba(255, 209, 102, 0)');
+      ctx.fillStyle = glowGradient;
+      ctx.beginPath();
+      ctx.arc(dot.x, dot.y, 12, 0, 7);
+      ctx.fill();
       
-      // Show GOJO stars
-      constellationStars = [...kaluDots, ...gojoDots];
+      // Bright core
+      ctx.beginPath();
+      ctx.arc(dot.x, dot.y, 2.5, 0, 7);
+      ctx.fillStyle = '#fff';
+      ctx.shadowBlur = 15;
+      ctx.shadowColor = '#ffd166';
+      ctx.fill();
+      ctx.shadowBlur = 0;
+    } else {
+      // Regular twinkling background star (blends in)
+      const op = Math.abs(Math.sin(dot.twinkleO)) * 0.7;
+      ctx.beginPath();
+      ctx.arc(dot.x, dot.y, 1.2, 0, 7);
+      ctx.fillStyle = `rgba(255, 255, 255, ${op})`;
+      ctx.fill();
+    }
+  });
+  
+  // 3. Draw constellation lines
+  constellationConnections.forEach(line => {
+    if (line.progress > 0) {
+      const dx = line.to.x - line.from.x;
+      const dy = line.to.y - line.from.y;
+      const currentX = line.from.x + dx * line.progress;
+      const currentY = line.from.y + dy * line.progress;
       
+      ctx.beginPath();
+      ctx.moveTo(line.from.x, line.from.y);
+      ctx.lineTo(currentX, currentY);
+      ctx.strokeStyle = 'rgba(255, 209, 102, 0.8)';
+      ctx.lineWidth = 1.2;
+      ctx.shadowBlur = 10;
+      ctx.shadowColor = '#ffd166';
+      ctx.stroke();
+      ctx.shadowBlur = 0;
+    }
+  });
+  
+  requestAnimationFrame(draw);
+}
+draw();
+
+// ============ REVEAL SEQUENCE ============
+function revealDots(dots, duration = 800, callback) {
+  const startTime = performance.now();
+  function frame(now) {
+    const elapsed = now - startTime;
+    const progress = Math.min(elapsed / duration, 1);
+    const targetIdx = Math.floor(progress * dots.length);
+    for (let i = 0; i < targetIdx; i++) dots[i].isRevealed = true;
+    if (progress < 1) requestAnimationFrame(frame);
+    else {
+      dots.forEach(d => d.isRevealed = true);
+      if (callback) callback();
+    }
+  }
+  requestAnimationFrame(frame);
+}
+
+function drawLines(lines, duration = 2000, callback) {
+  const startTime = performance.now();
+  function frame(now) {
+    const elapsed = now - startTime;
+    const overall = Math.min(elapsed / duration, 1);
+    
+    lines.forEach((line, i) => {
+      const lineStart = (i / lines.length) * 0.7;
+      const lineEnd = lineStart + 0.3;
+      const lineProgress = Math.max(0, Math.min(1, (overall - lineStart) / (lineEnd - lineStart)));
+      line.progress = lineProgress;
+    });
+    
+    if (overall < 1) requestAnimationFrame(frame);
+    else if (callback) callback();
+  }
+  requestAnimationFrame(frame);
+}
+
+function revealConstellation() {
+  // Reset
+  constellationDots.forEach(d => d.isRevealed = false);
+  constellationConnections.forEach(c => c.progress = 0);
+  document.getElementById('finalText').classList.remove('show');
+  
+  const kaluDots = constellationDots.filter(d => d.group === 'kalu');
+  const gojoDots = constellationDots.filter(d => d.group === 'gojo');
+  const heartDots = constellationDots.filter(d => d.group === 'heart');
+  const kaluLines = constellationConnections.filter(c => c.group === 'kalu');
+  const gojoLines = constellationConnections.filter(c => c.group === 'gojo');
+  const heartLines = constellationConnections.filter(c => c.group === 'heart');
+  
+  // Step 1: Reveal KALU stars
+  revealDots(kaluDots, 800, () => {
+    // Step 2: Draw KALU lines
+    drawLines(kaluLines, 1500, () => {
+      // Step 3: Reveal GOJO stars
       setTimeout(() => {
-        // Connect GOJO stars
-        const gojoLines = connectNearestNeighbors(gojoDots, 2, fontSize * 0.35);
-        constellationLinesNew = [...kaluLines, ...gojoLines];
-        animateGroup(gojoLines, 1800, 'progress', () => {
-          
-          // Show heart around everything
-          const heartSize = Math.min(w, h) * 0.012;
-          const heartPoints = extractHeartOutlinePoints(heartSize, 30);
-          const heartDots = heartPoints.map(p => ({
-            x: centerX + p.x,
-            y: centerY + p.y + 20,
-            fadeIn: 0
-          }));
-          constellationStars = [...kaluDots, ...gojoDots, ...heartDots];
-          
-          setTimeout(() => {
-            // Connect heart sequentially
-            const heartLines = connectSequential(heartDots);
-            constellationLinesNew = [...kaluLines, ...gojoLines, ...heartLines];
-            animateGroup(heartLines, 2500, 'progress');
-          }, 500);
+        revealDots(gojoDots, 800, () => {
+          // Step 4: Draw GOJO lines
+          drawLines(gojoLines, 1500, () => {
+            // Step 5: Reveal heart stars
+            setTimeout(() => {
+              revealDots(heartDots, 1000, () => {
+                // Step 6: Draw heart lines
+                drawLines(heartLines, 2000, () => {
+                  // Step 7: Show final text
+                  setTimeout(() => {
+                    document.getElementById('finalText').classList.add('show');
+                  }, 400);
+                });
+              });
+            }, 400);
+          });
         });
-      }, 500);
+      }, 400);
     });
-  }, 800);
-}
-
-// ============ 2. PHOTO RAIN ============
-const samplePhotos = [
-  'https://res.cloudinary.com/khovkitp/image/upload/v1785420312/photo1_vnynfw.jpg',
-  'https://res.cloudinary.com/khovkitp/image/upload/v1785420313/photo2_tkwxy0.jpg',
-  'https://res.cloudinary.com/khovkitp/image/upload/v1785420313/photo3_weksao.jpg',
-  'https://res.cloudinary.com/khovkitp/image/upload/v1785420313/photo4_ygxigq.jpg',
-  'https://res.cloudinary.com/khovkitp/image/upload/v1785420307/dadar1_lmchyb.jpg',
-  'https://res.cloudinary.com/khovkitp/image/upload/v1785420308/dadar2_orhadi.jpg',
-  'https://res.cloudinary.com/khovkitp/image/upload/v1785420314/summer1_flyevb.jpg',
-  'https://res.cloudinary.com/khovkitp/image/upload/v1785420314/summer2_tjadr0.jpg',
-  'https://res.cloudinary.com/khovkitp/image/upload/v1785420314/summer3_jvqi4p.jpg',
-  'https://res.cloudinary.com/khovkitp/image/upload/v1785420314/summer4_xx6lri.jpg'
-];
-
-function demo2_photoRain() {
-  const container = document.getElementById('photoRain');
-  container.innerHTML = '';
-  let count = 0;
-  const interval = setInterval(() => {
-    if (count >= 25) { clearInterval(interval); return; }
-    count++;
-    const photo = document.createElement('div');
-    photo.className = 'falling-photo';
-    photo.style.left = (Math.random() * 90 + 5) + '%';
-    photo.style.animationDuration = (4 + Math.random() * 3) + 's';
-    photo.style.setProperty('--startRot', (Math.random() * 60 - 30) + 'deg');
-    photo.style.setProperty('--endRot', (Math.random() * 60 - 30) + 'deg');
-    const img = document.createElement('img');
-    img.src = samplePhotos[Math.floor(Math.random() * samplePhotos.length)];
-    img.onerror = () => photo.remove();
-    photo.appendChild(img);
-    container.appendChild(photo);
-    setTimeout(() => photo.remove(), 7000);
-  }, 200);
-}
-
-// ============ 3. HEART GAME ============
-let gameActive = false;
-let heartsCaught = 0;
-let gameInterval = null;
-
-function demo3_heartGame() {
-  if (gameActive) return;
-  gameActive = true;
-  heartsCaught = 0;
-  const overlay = document.getElementById('gameOverlay');
-  const winBox = document.getElementById('gameWin');
-  winBox.classList.remove('show');
-  overlay.innerHTML = '';
-  overlay.classList.add('active');
-  let counter = document.createElement('div');
-  counter.className = 'game-counter';
-  counter.id = 'gameCounter';
-  counter.textContent = '💕 Catch 10 hearts! (0/10)';
-  document.body.appendChild(counter);
-  gameInterval = setInterval(() => {
-    if (!gameActive) return;
-    const heart = document.createElement('div');
-    heart.className = 'game-heart';
-    heart.textContent = ['💗','💕','❤️','💖','💝'][Math.floor(Math.random()*5)];
-    heart.style.left = (Math.random() * 90 + 5) + '%';
-    heart.style.animationDuration = (3 + Math.random() * 2) + 's';
-    heart.style.fontSize = (30 + Math.random() * 25) + 'px';
-    heart.addEventListener('click', () => {
-      if (heart.classList.contains('popped')) return;
-      heart.classList.add('popped');
-      heartsCaught++;
-      document.getElementById('gameCounter').textContent = `💕 Catch 10 hearts! (${heartsCaught}/10)`;
-      if (heartsCaught >= 10) endGame();
-    });
-    overlay.appendChild(heart);
-    setTimeout(() => heart.remove(), 5000);
-  }, 500);
-}
-
-function endGame() {
-  gameActive = false;
-  clearInterval(gameInterval);
-  document.getElementById('gameCounter')?.remove();
-  document.getElementById('gameOverlay').classList.remove('active');
-  document.getElementById('gameOverlay').innerHTML = '';
-  document.getElementById('gameWin').classList.add('show');
-  setTimeout(() => document.getElementById('gameWin').classList.remove('show'), 5000);
-}
-
-// ============ 4. FORTUNE COOKIE ============
-function demo4_fortuneCookie() {
-  document.getElementById('cookieOverlay').classList.add('show');
-  document.getElementById('fortunePaper').classList.remove('show');
-  document.getElementById('closeFortune').classList.remove('show');
-  document.getElementById('cookie').classList.remove('cracking');
-  document.getElementById('cookie').style.display = 'block';
-}
-
-function crackCookie() {
-  const cookie = document.getElementById('cookie');
-  cookie.classList.add('cracking');
-  setTimeout(() => {
-    cookie.style.display = 'none';
-    document.getElementById('fortunePaper').classList.add('show');
-    document.getElementById('closeFortune').classList.add('show');
-  }, 600);
-}
-
-function closeFortune() {
-  document.getElementById('cookieOverlay').classList.remove('show');
+  });
 }
 </script>
 
