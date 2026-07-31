@@ -19,6 +19,10 @@
   
   #starCanvas { position: fixed; inset: 0; z-index: 1; }
   
+  .constellation-name { position: fixed; top: 12%; left: 50%; transform: translateX(-50%); font-family: 'Dancing Script', cursive; font-size: clamp(1.5rem, 3.5vw, 2.5rem); color: rgba(220, 230, 255, 0.9); text-shadow: 0 0 20px rgba(200, 220, 255, 0.7); opacity: 0; transition: opacity 2.5s ease; pointer-events: none; z-index: 5; text-align: center; letter-spacing: 3px; font-style: italic; }
+  .constellation-name.show { opacity: 1; }
+  .constellation-name .small { display: block; font-size: 0.5em; letter-spacing: 4px; opacity: 0.7; margin-top: 5px; font-family: 'Poppins'; font-style: normal; }
+  
   .final-text { position: fixed; bottom: 8%; left: 50%; transform: translateX(-50%); font-family: 'Dancing Script', cursive; font-size: clamp(1.3rem, 3vw, 2rem); color: rgba(220, 230, 255, 0.85); text-shadow: 0 0 15px rgba(200, 220, 255, 0.6); opacity: 0; transition: opacity 2s ease; pointer-events: none; z-index: 5; text-align: center; letter-spacing: 2px; }
   .final-text.show { opacity: 1; }
 </style>
@@ -35,6 +39,7 @@
   <button class="reset-btn" onclick="location.reload()">🔄 Reset</button>
 </div>
 
+<div id="constellationName" class="constellation-name"></div>
 <div id="finalText" class="final-text">— Written in the stars —</div>
 
 <script>
@@ -45,6 +50,32 @@ function resizeCanvas() {
   canvas.width = innerWidth; 
   canvas.height = innerHeight; 
   layoutStars();
+}
+
+// ============ CONSTELLATION NAMES (random each visit) ============
+const constellationNames = [
+  "Amoris Aeternum",       // Eternal Love
+  "Cor Amantium",           // Heart of Lovers
+  "Stella Duorum",          // Star of Two
+  "Vinculum Cordis",        // Bond of Hearts
+  "Iuncti in Astris",       // Joined in the Stars
+  "Nexus Animae",           // Soul Connection
+  "Lumen Amoris",           // Light of Love
+  "Astrum Fidelis",         // Faithful Star
+  "Corda Coniuncta",        // Hearts United
+  "Perpetui Amantes",       // Perpetual Lovers
+  "Sidus Amantium",         // Constellation of Lovers
+  "Aeternum Vinculum",      // Eternal Bond
+  "Cor Iunctum",            // Joined Heart
+  "Duo in Uno",             // Two in One
+  "Astra Fatorum"           // Stars of Fate
+];
+
+function randomConstellationName() {
+  const name = constellationNames[Math.floor(Math.random() * constellationNames.length)];
+  const year = 2024 + Math.floor(Math.random() * 3);
+  const catalog = String.fromCharCode(65 + Math.floor(Math.random() * 26)) + String.fromCharCode(65 + Math.floor(Math.random() * 26)) + '-' + Math.floor(Math.random() * 900 + 100);
+  return { name, catalog: `Catalog ${catalog} · Discovered ${year}` };
 }
 
 // ============ LETTER DEFINITIONS ============
@@ -79,38 +110,101 @@ const letters = {
   }
 };
 
+// ============ AUDIO (Web Audio API — no external files) ============
+let audioContext = null;
+let audioEnabled = false;
+
+function initAudio() {
+  if (audioContext) return;
+  try {
+    audioContext = new (window.AudioContext || window.webkitAudioContext)();
+    audioEnabled = true;
+  } catch (e) {
+    console.log("Audio not supported");
+  }
+}
+
+// Soft whoosh sound for traveling line (very subtle)
+function playWhoosh() {
+  if (!audioEnabled || !audioContext) return;
+  const osc = audioContext.createOscillator();
+  const gain = audioContext.createGain();
+  const filter = audioContext.createBiquadFilter();
+  
+  osc.type = 'sine';
+  osc.frequency.setValueAtTime(200, audioContext.currentTime);
+  osc.frequency.exponentialRampToValueAtTime(400, audioContext.currentTime + 0.6);
+  
+  filter.type = 'lowpass';
+  filter.frequency.setValueAtTime(800, audioContext.currentTime);
+  
+  gain.gain.setValueAtTime(0, audioContext.currentTime);
+  gain.gain.linearRampToValueAtTime(0.04, audioContext.currentTime + 0.1); // Very soft
+  gain.gain.exponentialRampToValueAtTime(0.001, audioContext.currentTime + 0.7);
+  
+  osc.connect(filter);
+  filter.connect(gain);
+  gain.connect(audioContext.destination);
+  
+  osc.start(audioContext.currentTime);
+  osc.stop(audioContext.currentTime + 0.7);
+}
+
+// Gentle chime when star lights up
+function playChime(baseFreq = 800) {
+  if (!audioEnabled || !audioContext) return;
+  const osc = audioContext.createOscillator();
+  const gain = audioContext.createGain();
+  
+  osc.type = 'sine';
+  osc.frequency.setValueAtTime(baseFreq, audioContext.currentTime);
+  osc.frequency.exponentialRampToValueAtTime(baseFreq * 1.5, audioContext.currentTime + 0.4);
+  
+  gain.gain.setValueAtTime(0, audioContext.currentTime);
+  gain.gain.linearRampToValueAtTime(0.06, audioContext.currentTime + 0.05); // Soft
+  gain.gain.exponentialRampToValueAtTime(0.001, audioContext.currentTime + 0.5);
+  
+  osc.connect(gain);
+  gain.connect(audioContext.destination);
+  
+  osc.start(audioContext.currentTime);
+  osc.stop(audioContext.currentTime + 0.5);
+}
+
 // ============ STARS ============
 let bgStars = [];
 let constellationDots = [];
 let constellationConnections = [];
-let sparkParticles = []; // For traveling spark trails
+let sparkParticles = [];
+let currentConstellationName = null;
 
-// Truly random jitter (different every reload)
 function jitter(amount) {
   return (Math.random() - 0.5) * amount;
 }
 
-// Natural star size distribution: most stars small, few large (like real sky)
+// More dramatic natural star size distribution
 function naturalStarSize() {
   const r = Math.random();
-  if (r < 0.6) return 1.2 + Math.random() * 0.8; // 60% small stars (1.2-2.0)
-  if (r < 0.9) return 2.0 + Math.random() * 1.0; // 30% medium (2.0-3.0)
-  return 3.0 + Math.random() * 1.5;              // 10% bright large (3.0-4.5)
+  if (r < 0.5) return 0.8 + Math.random() * 0.8;   // 50% tiny stars
+  if (r < 0.8) return 1.6 + Math.random() * 1.2;   // 30% medium
+  if (r < 0.95) return 2.8 + Math.random() * 1.5;  // 15% bright
+  return 4.3 + Math.random() * 2.0;                // 5% very bright
 }
 
-// Natural glow size based on star size
+// Natural glow: proportional but not perfect circle
 function glowSizeFor(coreSize) {
-  return coreSize * 5 + Math.random() * 3;
+  return coreSize * 4 + Math.random() * 4;
 }
 
-// Slight color variation (real stars have subtle color tints)
 function starColorTint() {
   const tints = [
-    'rgba(255, 250, 240',  // Warm white
-    'rgba(240, 245, 255',  // Cool blue-white
-    'rgba(255, 245, 235',  // Soft yellow-white
-    'rgba(245, 250, 255',  // Pure white
-    'rgba(255, 240, 230'   // Slight orange
+    'rgba(255, 250, 240',
+    'rgba(240, 245, 255',
+    'rgba(255, 245, 235',
+    'rgba(245, 250, 255',
+    'rgba(255, 240, 230',
+    'rgba(230, 240, 255',
+    'rgba(255, 248, 245'
   ];
   return tints[Math.floor(Math.random() * tints.length)];
 }
@@ -128,8 +222,7 @@ function layoutStars() {
   constellationDots = [];
   constellationConnections = [];
   
-  // Random jitter amounts (varies each visit!)
-  const jitterFactor = 0.08 + Math.random() * 0.08; // 8-16% variation each reload
+  const jitterFactor = 0.08 + Math.random() * 0.08;
   
   // KALU
   const kaluWidth = 4 * letterWidth + 3 * spacing;
@@ -152,12 +245,12 @@ function layoutStars() {
         isRevealed: false,
         revealProgress: 0,
         twinkleO: Math.random() * 10,
-        twinkleS: Math.random() * 0.02 + 0.005,
+        twinkleS: 0.03 + Math.random() * 0.04, // Faster twinkle for lit stars
         brightness: 0.65 + Math.random() * 0.35,
         size: coreSize,
         glowRadius: glowSizeFor(coreSize),
         color: starColorTint(),
-        hasRays: coreSize > 2.5 // Only bright stars have rays
+        hasRays: coreSize > 2.8
       });
       kaluDotIndex++;
     });
@@ -195,12 +288,12 @@ function layoutStars() {
         isRevealed: false,
         revealProgress: 0,
         twinkleO: Math.random() * 10,
-        twinkleS: Math.random() * 0.02 + 0.005,
+        twinkleS: 0.03 + Math.random() * 0.04,
         brightness: 0.65 + Math.random() * 0.35,
         size: coreSize,
         glowRadius: glowSizeFor(coreSize),
         color: starColorTint(),
-        hasRays: coreSize > 2.5
+        hasRays: coreSize > 2.8
       });
       gojoDotIndex++;
     });
@@ -217,18 +310,15 @@ function layoutStars() {
     });
   });
   
-  // HEART — EVEN BIGGER
+  // HEART
   const maxNameWidth = Math.max(kaluWidth, gojoWidth);
   const totalNameHeight = (letterHeight * 2) + 120;
-  
-  const heartWidth = maxNameWidth * 2.8; // Was 2.2, now 2.8
-  const heartHeight = totalNameHeight * 2.3; // Was 1.9, now 2.3
-  
+  const heartWidth = maxNameWidth * 2.8;
+  const heartHeight = totalNameHeight * 2.3;
   const heartCenterX = centerX;
   const heartCenterY = centerY;
   const numHeartPoints = 24;
   const heartStartIdx = constellationDots.length;
-  
   const scaleX = heartWidth / 32;
   const scaleY = heartHeight / 30;
   
@@ -244,12 +334,12 @@ function layoutStars() {
       isRevealed: false,
       revealProgress: 0,
       twinkleO: Math.random() * 10,
-      twinkleS: Math.random() * 0.02 + 0.005,
+      twinkleS: 0.03 + Math.random() * 0.04,
       brightness: 0.65 + Math.random() * 0.35,
       size: coreSize,
       glowRadius: glowSizeFor(coreSize),
       color: starColorTint(),
-      hasRays: coreSize > 2.5
+      hasRays: coreSize > 2.8
     });
   }
   
@@ -264,9 +354,9 @@ function layoutStars() {
     });
   }
   
-  // Background stars
+  // Background stars — DIFFERENT sizes, natural pinpoints (no big halos)
   bgStars = [];
-  const numBgStars = 100;
+  const numBgStars = 130;
   const minDist = 50;
   
   let attempts = 0;
@@ -278,14 +368,15 @@ function layoutStars() {
     const tooClose = constellationDots.some(d => Math.hypot(d.x - x, d.y - y) < minDist);
     if (tooClose) continue;
     
-    const coreSize = naturalStarSize() * 0.7; // Slightly smaller for BG
+    const coreSize = naturalStarSize() * 0.6; // Smaller for background
     bgStars.push({
       x, y,
       r: coreSize,
       o: Math.random() * 10,
-      s: Math.random() * 0.02 + 0.005,
-      brightness: 0.5 + Math.random() * 0.5,
-      color: starColorTint()
+      s: Math.random() * 0.025 + 0.005,
+      brightness: 0.4 + Math.random() * 0.55,
+      color: starColorTint(),
+      isBright: coreSize > 1.5
     });
   }
 }
@@ -297,23 +388,38 @@ window.addEventListener('resize', resizeCanvas);
 function draw() {
   ctx.clearRect(0, 0, canvas.width, canvas.height);
   
-  // Background stars (natural varied color)
+  // Background stars — NATURAL pinpoints (like real photography)
   bgStars.forEach(st => {
     st.o += st.s;
     const op = Math.abs(Math.sin(st.o)) * st.brightness;
     
-    // Small glow for bigger BG stars
-    if (st.r > 1.5) {
+    // ONLY brighter stars get a subtle diffused glow (no big circles)
+    if (st.isBright && op > 0.4) {
+      // Very soft, subtle diffusion (not a hard circle)
       ctx.beginPath();
-      ctx.arc(st.x, st.y, st.r * 3, 0, 7);
-      ctx.fillStyle = `${st.color}, ${op * 0.2})`;
+      ctx.arc(st.x, st.y, st.r * 2.5, 0, 7);
+      ctx.fillStyle = `${st.color}, ${op * 0.08})`; // Very faint
       ctx.fill();
     }
     
+    // Sharp pinpoint core (like real stars)
     ctx.beginPath();
     ctx.arc(st.x, st.y, st.r, 0, 7);
     ctx.fillStyle = `${st.color}, ${op})`;
     ctx.fill();
+    
+    // Small cross-glare on brightest ones (real lens effect)
+    if (st.isBright && op > 0.6) {
+      const glareLen = st.r * 2;
+      ctx.strokeStyle = `${st.color}, ${op * 0.3})`;
+      ctx.lineWidth = 0.4;
+      ctx.beginPath();
+      ctx.moveTo(st.x - glareLen, st.y);
+      ctx.lineTo(st.x + glareLen, st.y);
+      ctx.moveTo(st.x, st.y - glareLen);
+      ctx.lineTo(st.x, st.y + glareLen);
+      ctx.stroke();
+    }
   });
   
   // Constellation dots
@@ -321,36 +427,37 @@ function draw() {
     dot.twinkleO += dot.twinkleS;
     
     if (dot.isRevealed) {
-      if (dot.revealProgress < 1) dot.revealProgress = Math.min(dot.revealProgress + 0.05, 1);
+      if (dot.revealProgress < 1) dot.revealProgress = Math.min(dot.revealProgress + 0.04, 1);
+      
+      // Twinkle even when lit (natural pulsing)
+      const twinkle = 0.75 + Math.sin(dot.twinkleO * 2) * 0.25;
+      const finalOpacity = twinkle * dot.revealProgress;
       
       const glowSize = dot.glowRadius * dot.revealProgress;
       
-      // Soft outer glow
+      // Soft natural glow
       const glowGradient = ctx.createRadialGradient(dot.x, dot.y, 0, dot.x, dot.y, glowSize);
-      glowGradient.addColorStop(0, `${dot.color}, ${0.55 * dot.revealProgress})`);
-      glowGradient.addColorStop(0.4, `${dot.color}, ${0.25 * dot.revealProgress})`);
+      glowGradient.addColorStop(0, `${dot.color}, ${0.5 * finalOpacity})`);
+      glowGradient.addColorStop(0.5, `${dot.color}, ${0.2 * finalOpacity})`);
       glowGradient.addColorStop(1, `${dot.color}, 0)`);
       ctx.fillStyle = glowGradient;
       ctx.beginPath();
       ctx.arc(dot.x, dot.y, glowSize, 0, 7);
       ctx.fill();
       
-      // Natural twinkle on core
-      const twinkle = 0.88 + Math.sin(dot.twinkleO * 2.5) * 0.12;
-      
-      // Bright core (natural color)
+      // Bright core with twinkle
       ctx.beginPath();
       ctx.arc(dot.x, dot.y, dot.size * dot.revealProgress, 0, 7);
-      ctx.fillStyle = `${dot.color}, ${twinkle * dot.revealProgress})`;
-      ctx.shadowBlur = 10;
-      ctx.shadowColor = `${dot.color}, 0.7)`;
+      ctx.fillStyle = `${dot.color}, ${finalOpacity})`;
+      ctx.shadowBlur = 8;
+      ctx.shadowColor = `${dot.color}, 0.6)`;
       ctx.fill();
       ctx.shadowBlur = 0;
       
-      // Cross rays ONLY on bright stars (natural, like camera lens flare on real stars)
-      if (dot.hasRays && dot.revealProgress > 0.6) {
-        const rayLength = dot.size * 4 * dot.revealProgress;
-        const rayOpacity = 0.35 * dot.revealProgress * twinkle;
+      // Cross rays only on bright stars, twinkling with them
+      if (dot.hasRays && dot.revealProgress > 0.5) {
+        const rayLength = dot.size * 3.5 * dot.revealProgress;
+        const rayOpacity = 0.3 * finalOpacity;
         ctx.strokeStyle = `${dot.color}, ${rayOpacity})`;
         ctx.lineWidth = 0.6;
         ctx.beginPath();
@@ -361,16 +468,16 @@ function draw() {
         ctx.stroke();
       }
     } else {
-      // Hidden: small twinkling star (varies naturally)
-      const op = Math.abs(Math.sin(dot.twinkleO)) * dot.brightness * 0.85;
+      // Hidden: natural background twinkle
+      const op = Math.abs(Math.sin(dot.twinkleO)) * dot.brightness * 0.75;
       ctx.beginPath();
-      ctx.arc(dot.x, dot.y, dot.size * 0.5, 0, 7);
+      ctx.arc(dot.x, dot.y, dot.size * 0.4, 0, 7);
       ctx.fillStyle = `${dot.color}, ${op})`;
       ctx.fill();
     }
   });
   
-  // Constellation lines
+  // Constellation lines (smooth continuous, no stops)
   constellationConnections.forEach(line => {
     if (line.progress > 0) {
       const dx = line.to.x - line.from.x;
@@ -378,7 +485,6 @@ function draw() {
       const currentX = line.from.x + dx * line.progress;
       const currentY = line.from.y + dy * line.progress;
       
-      // Main line
       ctx.beginPath();
       ctx.moveTo(line.from.x, line.from.y);
       ctx.lineTo(currentX, currentY);
@@ -391,20 +497,19 @@ function draw() {
     }
   });
   
-  // Draw & update spark particles (traveling light head)
+  // Spark particles
   for (let i = sparkParticles.length - 1; i >= 0; i--) {
     const p = sparkParticles[i];
-    p.life -= 0.03;
+    p.life -= 0.025;
     p.x += p.vx;
     p.y += p.vy;
-    p.vy += 0.02; // Slight gravity for natural drift
+    p.vy += 0.015;
     
     if (p.life <= 0) {
       sparkParticles.splice(i, 1);
       continue;
     }
     
-    // Draw spark particle with sparkle glow
     const size = p.size * p.life;
     const sparkGradient = ctx.createRadialGradient(p.x, p.y, 0, p.x, p.y, size * 3);
     sparkGradient.addColorStop(0, `rgba(255, 255, 255, ${p.life})`);
@@ -420,7 +525,6 @@ function draw() {
 }
 draw();
 
-// Emit sparkles at the traveling line head
 function emitSparkles(x, y, count = 2) {
   for (let i = 0; i < count; i++) {
     sparkParticles.push({
@@ -434,98 +538,138 @@ function emitSparkles(x, y, count = 2) {
   }
 }
 
-// ============ ANIMATION HELPERS ============
-
-function easeInOutCubic(t) {
-  return t < 0.5 ? 4 * t * t * t : 1 - Math.pow(-2 * t + 2, 3) / 2;
-}
-
-function drawSingleLine(line, duration = 700, callback) {
-  if (!line.fromLit) {
-    line.from.isRevealed = true;
-    line.fromLit = true;
-  }
+// ============ CONTINUOUS FLOW ANIMATION ============
+// Draw all lines in a group as one continuous flowing motion
+function drawContinuousFlow(lines, totalDuration = 5000, callback) {
+  if (lines.length === 0) { if (callback) callback(); return; }
+  
+  // Calculate total distance for even speed
+  let totalDist = 0;
+  const distances = lines.map(line => {
+    const d = Math.hypot(line.to.x - line.from.x, line.to.y - line.from.y);
+    totalDist += d;
+    return d;
+  });
+  
+  // Calculate cumulative time for each line proportional to its length
+  const timings = [];
+  let cumTime = 0;
+  distances.forEach(d => {
+    const lineTime = (d / totalDist) * totalDuration;
+    timings.push({ start: cumTime, end: cumTime + lineTime });
+    cumTime += lineTime;
+  });
+  
+  // Play whoosh sound at start
+  playWhoosh();
   
   const startTime = performance.now();
   let lastSparkTime = 0;
   
   function frame(now) {
     const elapsed = now - startTime;
-    const progress = Math.min(elapsed / duration, 1);
-    line.progress = easeInOutCubic(progress);
     
-    // Calculate current head position for sparkle emission
-    const dx = line.to.x - line.from.x;
-    const dy = line.to.y - line.from.y;
-    const currentX = line.from.x + dx * line.progress;
-    const currentY = line.from.y + dy * line.progress;
+    // Update all lines based on current time
+    lines.forEach((line, i) => {
+      const timing = timings[i];
+      if (elapsed < timing.start) {
+        line.progress = 0;
+        return;
+      }
+      if (elapsed >= timing.end) {
+        line.progress = 1;
+        // Light TO star when this line finishes
+        if (!line.toLit) {
+          line.to.isRevealed = true;
+          line.toLit = true;
+          playChime(600 + Math.random() * 400); // Random pleasant frequency
+          emitSparkles(line.to.x, line.to.y, 8);
+        }
+        // Light FROM star (first line)
+        if (!line.fromLit) {
+          line.from.isRevealed = true;
+          line.fromLit = true;
+        }
+        return;
+      }
+      
+      // Currently active line
+      const lineElapsed = elapsed - timing.start;
+      const lineDuration = timing.end - timing.start;
+      const rawProgress = lineElapsed / lineDuration;
+      line.progress = rawProgress; // No easing = smooth continuous speed
+      
+      // Light FROM star when line starts
+      if (!line.fromLit && line.progress > 0.01) {
+        line.from.isRevealed = true;
+        line.fromLit = true;
+        playChime(600 + Math.random() * 400);
+        emitSparkles(line.from.x, line.from.y, 6);
+      }
+      
+      // Emit sparkles at moving head
+      if (now - lastSparkTime > 30) {
+        const currentX = line.from.x + (line.to.x - line.from.x) * line.progress;
+        const currentY = line.from.y + (line.to.y - line.from.y) * line.progress;
+        emitSparkles(currentX, currentY, 3);
+        lastSparkTime = now;
+      }
+    });
     
-    // Emit sparkles at the traveling head (every 30ms)
-    if (now - lastSparkTime > 30 && line.progress < 1) {
-      emitSparkles(currentX, currentY, 3);
-      lastSparkTime = now;
-    }
-    
-    // Light TO star when spark arrives
-    if (line.progress > 0.9 && !line.toLit) {
-      line.to.isRevealed = true;
-      line.toLit = true;
-      // Burst of sparkles when reaching a star
-      emitSparkles(line.to.x, line.to.y, 8);
-    }
-    
-    if (progress < 1) {
+    if (elapsed < totalDuration) {
       requestAnimationFrame(frame);
     } else {
-      line.progress = 1;
-      line.to.isRevealed = true;
-      line.toLit = true;
+      // Ensure all finished
+      lines.forEach(line => {
+        line.progress = 1;
+        if (!line.toLit) { line.to.isRevealed = true; line.toLit = true; }
+        if (!line.fromLit) { line.from.isRevealed = true; line.fromLit = true; }
+      });
       if (callback) callback();
     }
   }
   requestAnimationFrame(frame);
 }
 
-function drawLinesSequential(lines, timePerLine = 700, gapBetween = 100, callback) {
-  let currentIdx = 0;
-  
-  function drawNext() {
-    if (currentIdx >= lines.length) {
-      if (callback) callback();
-      return;
-    }
-    
-    drawSingleLine(lines[currentIdx], timePerLine, () => {
-      currentIdx++;
-      setTimeout(drawNext, gapBetween);
-    });
-  }
-  
-  drawNext();
-}
-
-// ============ MAIN REVEAL SEQUENCE ============
+// ============ MAIN REVEAL ============
 function revealConstellation() {
+  // Initialize audio on user interaction
+  initAudio();
+  
   // Reset
   constellationDots.forEach(d => { d.isRevealed = false; d.revealProgress = 0; });
   constellationConnections.forEach(c => { c.progress = 0; c.fromLit = false; c.toLit = false; });
   sparkParticles = [];
   document.getElementById('finalText').classList.remove('show');
+  document.getElementById('constellationName').classList.remove('show');
+  
+  // Assign random constellation name
+  currentConstellationName = randomConstellationName();
   
   const kaluLines = constellationConnections.filter(c => c.group === 'kalu');
   const gojoLines = constellationConnections.filter(c => c.group === 'gojo');
   const heartLines = constellationConnections.filter(c => c.group === 'heart');
   
-  drawLinesSequential(kaluLines, 700, 120, () => {
+  // KALU (continuous flow, ~4 seconds)
+  drawContinuousFlow(kaluLines, 4000, () => {
     setTimeout(() => {
-      drawLinesSequential(gojoLines, 700, 120, () => {
+      // GOJO
+      drawContinuousFlow(gojoLines, 4000, () => {
         setTimeout(() => {
-          drawLinesSequential(heartLines, 500, 80, () => {
+          // HEART (bigger, so more time)
+          drawContinuousFlow(heartLines, 5000, () => {
             setTimeout(() => {
-              document.getElementById('finalText').classList.add('show');
-            }, 800);
+              // Show constellation name
+              const nameEl = document.getElementById('constellationName');
+              nameEl.innerHTML = `"${currentConstellationName.name}"<span class="small">${currentConstellationName.catalog}</span>`;
+              nameEl.classList.add('show');
+              
+              setTimeout(() => {
+                document.getElementById('finalText').classList.add('show');
+              }, 1500);
+            }, 600);
           });
-        }, 600);
+        }, 500);
       });
     }, 500);
   });
