@@ -1523,18 +1523,13 @@
 
     .letter-box {
       max-width: 600px;
-      min-height: 550px;
-      height: 550px;
-      /* FIXED height - won't grow */
+      width: 100%;
       background: #fffaf5;
       color: #5a3a44;
       padding: 40px 30px;
       border-radius: 12px;
       box-shadow: 0 10px 40px rgba(0, 0, 0, .15);
       position: relative;
-      display: flex;
-      flex-direction: column;
-      overflow: hidden;
     }
 
     .letter-box::before {
@@ -1551,8 +1546,6 @@
       line-height: 1.9;
       white-space: pre-wrap;
       text-align: left;
-      flex: 1;
-      overflow: hidden;
     }
 
     .signature {
@@ -2041,14 +2034,16 @@
       opacity: 1;
     }
 
-    /* Prevent section snap issues during letter typing */
+    /* Give the love letter section enough space upfront to prevent jumping */
     #loveletter {
-      scroll-snap-align: none !important;
       min-height: 100vh;
+      scroll-snap-align: start;
+      padding: 100px 20px;
     }
 
     #loveletter .section-inner {
       min-height: 700px;
+      /* Reserve space equal to expected letter height */
       justify-content: center;
     }
 
@@ -3048,14 +3043,10 @@ Happy Girlfriend Day, Kalu. I love you.`;
           const signature = document.querySelector('#loveletter .signature');
           if (signature) signature.classList.remove('show');
 
-          // Disable scroll snap during typing
-          document.body.classList.add('letter-typing');
-
           typeWriter(document.getElementById('letterText'), letterMsg, 16, () => {
+            // Show signature 500ms after letter completes
             setTimeout(() => {
               if (signature) signature.classList.add('show');
-              // Re-enable scroll snap after typing
-              document.body.classList.remove('letter-typing');
             }, 500);
           });
         }
