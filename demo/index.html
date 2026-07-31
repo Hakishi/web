@@ -18,14 +18,9 @@
   .reset-btn { padding: 12px 24px; border-radius: 30px; border: 2px solid #38bdf8; background: transparent; color: #38bdf8; cursor: pointer; margin-top: 10px; }
   .reset-btn:hover { background: #38bdf8; color: #000; }
   
-  /* ============ SHARED CANVAS ============ */
   #starCanvas { position: fixed; inset: 0; z-index: 1; }
   
-  /* ============ 1. CONSTELLATION ============ */
-  .constellation-text { position: fixed; top: 50%; left: 50%; transform: translate(-50%, -50%); font-family: 'Dancing Script', cursive; font-size: clamp(2rem, 8vw, 5rem); color: #ff6fa5; text-shadow: 0 0 30px #ff6fa5, 0 0 60px rgba(255,111,165,0.5); opacity: 0; transition: opacity 2s ease 2s; z-index: 5; pointer-events: none; text-align: center; }
-  .constellation-text.show { opacity: 1; }
-  
-  /* ============ 2. RAIN OF PHOTOS ============ */
+  /* ============ PHOTO RAIN ============ */
   .photo-rain { position: fixed; inset: 0; pointer-events: none; z-index: 100; overflow: hidden; }
   .falling-photo { position: absolute; width: 100px; height: 120px; background: #fff; padding: 8px 8px 20px 8px; border-radius: 4px; box-shadow: 0 8px 25px rgba(0,0,0,0.4); animation: fallPhoto linear forwards; }
   .falling-photo img { width: 100%; height: 100%; object-fit: cover; display: block; }
@@ -34,7 +29,7 @@
     100% { transform: translateY(110vh) rotate(var(--endRot, 15deg)); }
   }
   
-  /* ============ 3. HEART GAME ============ */
+  /* ============ HEART GAME ============ */
   .game-overlay { position: fixed; inset: 0; z-index: 100; pointer-events: none; }
   .game-overlay.active { pointer-events: auto; }
   .game-counter { position: fixed; top: 20px; left: 50%; transform: translateX(-50%); background: rgba(255,111,165,0.95); color: #fff; padding: 12px 30px; border-radius: 30px; font-size: 20px; font-weight: bold; z-index: 200; box-shadow: 0 10px 30px rgba(0,0,0,0.4); }
@@ -56,7 +51,7 @@
   .game-win h2 { font-size: 2rem; color: #fff; margin-bottom: 10px; }
   .game-win p { color: #fff; font-size: 1.1rem; }
   
-  /* ============ 4. FORTUNE COOKIE ============ */
+  /* ============ FORTUNE COOKIE ============ */
   .cookie-overlay { position: fixed; inset: 0; background: rgba(0,0,0,0.85); z-index: 100; display: none; align-items: center; justify-content: center; flex-direction: column; gap: 30px; }
   .cookie-overlay.show { display: flex; }
   .cookie { font-size: 120px; cursor: pointer; transition: transform 0.3s; user-select: none; filter: drop-shadow(0 10px 30px rgba(255,200,100,0.6)); }
@@ -92,9 +87,6 @@
   <button class="reset-btn" onclick="location.reload()">🔄 Reset All</button>
 </div>
 
-<!-- Constellation text -->
-<div id="constellationText" class="constellation-text">KALU ❤️ GOJO</div>
-
 <!-- Photo rain container -->
 <div id="photoRain" class="photo-rain"></div>
 
@@ -117,7 +109,7 @@
 </div>
 
 <script>
-// ============ STARFIELD (Base) ============
+// ============ STARFIELD ============
 const canvas = document.getElementById('starCanvas');
 const ctx = canvas.getContext('2d');
 function resizeCanvas() { canvas.width = innerWidth; canvas.height = innerHeight; }
@@ -126,36 +118,57 @@ window.addEventListener('resize', resizeCanvas);
 
 let stars = [];
 function initStars() {
-  stars = Array.from({length: 200}, () => ({
+  stars = Array.from({length: 250}, () => ({
     x: Math.random() * canvas.width,
     y: Math.random() * canvas.height,
     r: Math.random() * 1.5 + 0.3,
-    baseX: 0, baseY: 0,
-    targetX: 0, targetY: 0,
-    isHeart: false,
     o: Math.random() * 10,
-    s: Math.random() * 0.02 + 0.005
+    s: Math.random() * 0.02 + 0.005,
+    highlighted: false,
+    glowIntensity: 0
   }));
-  stars.forEach(st => { st.baseX = st.x; st.baseY = st.y; });
 }
 initStars();
 
-let animationMode = 'normal'; // 'normal' or 'constellation'
-let constellationProgress = 0;
+// Constellation state
+let constellationLines = []; // {from: star, to: star, progress: 0-1}
+let constellationActive = false;
 
 function drawStars() {
   ctx.clearRect(0, 0, canvas.width, canvas.height);
   
-  stars.forEach(st => {
-    if (animationMode === 'constellation' && st.isHeart) {
-      // Move toward target
-      st.x += (st.targetX - st.x) * 0.05;
-      st.y += (st.targetY - st.y) * 0.05;
+  // Draw constellation lines
+  constellationLines.forEach(line => {
+    if (line.progress > 0) {
+      const dx = line.to.x - line.from.x;
+      const dy = line.to.y - line.from.y;
+      const currentX = line.from.x + dx * line.progress;
+      const currentY = line.from.y + dy * line.progress;
+      
       ctx.beginPath();
-      ctx.arc(st.x, st.y, 2.5, 0, 7);
-      ctx.fillStyle = `rgba(255, 111, 165, 1)`;
-      ctx.shadowBlur = 15;
+      ctx.moveTo(line.from.x, line.from.y);
+      ctx.lineTo(currentX, currentY);
+      const gradient = ctx.createLinearGradient(line.from.x, line.from.y, currentX, currentY);
+      gradient.addColorStop(0, 'rgba(255, 111, 165, 0.9)');
+      gradient.addColorStop(1, 'rgba(255, 209, 102, 0.9)');
+      ctx.strokeStyle = gradient;
+      ctx.lineWidth = 1.5;
+      ctx.shadowBlur = 12;
       ctx.shadowColor = '#ff6fa5';
+      ctx.stroke();
+      ctx.shadowBlur = 0;
+    }
+  });
+  
+  // Draw stars
+  stars.forEach(st => {
+    if (st.highlighted) {
+      st.glowIntensity = Math.min(st.glowIntensity + 0.03, 1);
+      ctx.beginPath();
+      ctx.arc(st.x, st.y, 3 + st.glowIntensity * 1.5, 0, 7);
+      ctx.fillStyle = `rgba(255, 209, 102, ${0.8 + st.glowIntensity * 0.2})`;
+      ctx.shadowBlur = 20;
+      ctx.shadowColor = '#ffd166';
       ctx.fill();
       ctx.shadowBlur = 0;
     } else {
@@ -171,43 +184,189 @@ function drawStars() {
 }
 drawStars();
 
-// ============ 1. CONSTELLATION HEART ============
-function demo1_constellation() {
-  // Reset first
-  animationMode = 'normal';
-  stars.forEach(st => { st.isHeart = false; st.x = st.baseX; st.y = st.baseY; });
-  document.getElementById('constellationText').classList.remove('show');
+// ============ 1. CONSTELLATION ============
+
+// Helper: find closest actual star to a target point
+function findClosestStar(x, y, exclude = []) {
+  let minDist = Infinity;
+  let closest = null;
+  stars.forEach(st => {
+    if (exclude.includes(st)) return;
+    const d = Math.hypot(st.x - x, st.y - y);
+    if (d < minDist) { minDist = d; closest = st; }
+  });
+  return closest;
+}
+
+// Letter definitions using relative coordinates (0-1 scale within letter box)
+// Each letter is a series of line segments: [[x1,y1,x2,y2], ...]
+const letterPaths = {
+  K: [
+    [0, 0, 0, 1],       // Left vertical
+    [0, 0.5, 1, 0],     // Upper diagonal
+    [0, 0.5, 1, 1]      // Lower diagonal
+  ],
+  A: [
+    [0, 1, 0.5, 0],     // Left diagonal
+    [0.5, 0, 1, 1],     // Right diagonal
+    [0.2, 0.6, 0.8, 0.6] // Middle bar
+  ],
+  L: [
+    [0, 0, 0, 1],       // Vertical
+    [0, 1, 1, 1]        // Horizontal
+  ],
+  U: [
+    [0, 0, 0, 0.8],     // Left vertical
+    [0, 0.8, 0.2, 1],   // Left curve
+    [0.2, 1, 0.8, 1],   // Bottom
+    [0.8, 1, 1, 0.8],   // Right curve
+    [1, 0.8, 1, 0]      // Right vertical
+  ],
+  G: [
+    [1, 0.2, 0.8, 0],   // Top-right curve
+    [0.8, 0, 0.2, 0],   // Top
+    [0.2, 0, 0, 0.2],   // Top-left curve
+    [0, 0.2, 0, 0.8],   // Left
+    [0, 0.8, 0.2, 1],   // Bottom-left curve
+    [0.2, 1, 0.8, 1],   // Bottom
+    [0.8, 1, 1, 0.8],   // Bottom-right curve
+    [1, 0.8, 1, 0.5],   // Right partial
+    [1, 0.5, 0.6, 0.5]  // Inner bar
+  ],
+  O: [
+    [0.2, 0, 0.8, 0],   // Top
+    [0.8, 0, 1, 0.2],   // Top-right
+    [1, 0.2, 1, 0.8],   // Right
+    [1, 0.8, 0.8, 1],   // Bottom-right
+    [0.8, 1, 0.2, 1],   // Bottom
+    [0.2, 1, 0, 0.8],   // Bottom-left
+    [0, 0.8, 0, 0.2],   // Left
+    [0, 0.2, 0.2, 0]    // Top-left
+  ]
+};
+
+function buildLetterLines(letter, offsetX, offsetY, width, height) {
+  const paths = letterPaths[letter];
+  if (!paths) return [];
+  const usedStars = [];
+  const lines = [];
+  paths.forEach(([x1, y1, x2, y2]) => {
+    const from = findClosestStar(offsetX + x1 * width, offsetY + y1 * height, usedStars);
+    if (from) { from.highlighted = true; usedStars.push(from); }
+    const to = findClosestStar(offsetX + x2 * width, offsetY + y2 * height, usedStars);
+    if (to) { to.highlighted = true; usedStars.push(to); }
+    if (from && to) lines.push({ from, to, progress: 0 });
+  });
+  return lines;
+}
+
+function buildHeartLines(centerX, centerY, size) {
+  const points = [];
+  const numPoints = 24;
+  for (let i = 0; i < numPoints; i++) {
+    const t = (i / numPoints) * Math.PI * 2;
+    const x = 16 * Math.pow(Math.sin(t), 3);
+    const y = -(13 * Math.cos(t) - 5 * Math.cos(2*t) - 2 * Math.cos(3*t) - Math.cos(4*t));
+    points.push({ x: centerX + x * size, y: centerY + y * size });
+  }
   
-  setTimeout(() => {
-    // Generate heart shape coordinates
-    const heartPoints = [];
-    const centerX = canvas.width / 2;
-    const centerY = canvas.height / 2;
-    const scale = Math.min(canvas.width, canvas.height) * 0.015;
+  const usedStars = [];
+  const highlighted = [];
+  points.forEach(p => {
+    const star = findClosestStar(p.x, p.y, usedStars);
+    if (star) { star.highlighted = true; usedStars.push(star); highlighted.push(star); }
+  });
+  
+  const lines = [];
+  for (let i = 0; i < highlighted.length; i++) {
+    lines.push({ from: highlighted[i], to: highlighted[(i + 1) % highlighted.length], progress: 0 });
+  }
+  return lines;
+}
+
+function animateLines(lines, duration = 1500, callback) {
+  const startTime = performance.now();
+  function frame(now) {
+    const elapsed = now - startTime;
+    const overallProgress = Math.min(elapsed / duration, 1);
     
-    for (let i = 0; i < 60; i++) {
-      const t = (i / 60) * Math.PI * 2;
-      const x = 16 * Math.pow(Math.sin(t), 3);
-      const y = -(13 * Math.cos(t) - 5 * Math.cos(2*t) - 2 * Math.cos(3*t) - Math.cos(4*t));
-      heartPoints.push({ x: centerX + x * scale, y: centerY + y * scale });
-    }
-    
-    // Assign stars to heart points
-    heartPoints.forEach((point, i) => {
-      if (stars[i]) {
-        stars[i].isHeart = true;
-        stars[i].targetX = point.x;
-        stars[i].targetY = point.y;
-      }
+    lines.forEach((line, i) => {
+      const lineStart = (i / lines.length) * 0.8;
+      const lineEnd = lineStart + 0.3;
+      const lineProgress = Math.max(0, Math.min(1, (overallProgress - lineStart) / (lineEnd - lineStart)));
+      line.progress = lineProgress;
     });
     
-    animationMode = 'constellation';
-    
-    setTimeout(() => {
-      document.getElementById('constellationText').classList.add('show');
-    }, 500);
-  }, 100);
+    if (overallProgress < 1) requestAnimationFrame(frame);
+    else if (callback) callback();
+  }
+  requestAnimationFrame(frame);
 }
+
+function demo1_constellation() {
+  // Reset
+  stars.forEach(st => { st.highlighted = false; st.glowIntensity = 0; });
+  constellationLines = [];
+  constellationActive = true;
+  
+  const w = canvas.width;
+  const h = canvas.height;
+  const centerX = w / 2;
+  const centerY = h / 2;
+  
+  // Letter dimensions (responsive)
+  const letterHeight = Math.min(h * 0.15, 120);
+  const letterWidth = letterHeight * 0.7;
+  const spacing = letterWidth * 0.35;
+  
+  // KALU on top (4 letters)
+  const kaluWidth = 4 * letterWidth + 3 * spacing;
+  const kaluStartX = centerX - kaluWidth / 2;
+  const kaluY = centerY - letterHeight - 40;
+  
+  const kaluLines = [
+    ...buildLetterLines('K', kaluStartX, kaluY, letterWidth, letterHeight),
+    ...buildLetterLines('A', kaluStartX + (letterWidth + spacing), kaluY, letterWidth, letterHeight),
+    ...buildLetterLines('L', kaluStartX + 2 * (letterWidth + spacing), kaluY, letterWidth, letterHeight),
+    ...buildLetterLines('U', kaluStartX + 3 * (letterWidth + spacing), kaluY, letterWidth, letterHeight)
+  ];
+  
+  // GOJO below (4 letters)
+  const gojoWidth = 4 * letterWidth + 3 * spacing;
+  const gojoStartX = centerX - gojoWidth / 2;
+  const gojoY = centerY + 40;
+  
+  const gojoLines = [
+    ...buildLetterLines('G', gojoStartX, gojoY, letterWidth, letterHeight),
+    ...buildLetterLines('O', gojoStartX + (letterWidth + spacing), gojoY, letterWidth, letterHeight),
+    ...buildLetterLines('J', gojoStartX + 2 * (letterWidth + spacing), gojoY, letterWidth, letterHeight),
+    ...buildLetterLines('O', gojoStartX + 3 * (letterWidth + spacing), gojoY, letterWidth, letterHeight)
+  ];
+  
+  // Note: J uses L path (simple vertical + bottom curve). Let's add J
+  // Actually letterPaths.J doesn't exist yet, add it
+  
+  constellationLines = kaluLines;
+  animateLines(kaluLines, 1800, () => {
+    // After KALU, add GOJO lines
+    constellationLines = [...kaluLines, ...gojoLines];
+    animateLines(gojoLines, 1800, () => {
+      // After both names, draw heart
+      const heartSize = Math.min(w, h) * 0.025;
+      const heartLines = buildHeartLines(centerX, centerY, heartSize * 12);
+      constellationLines = [...kaluLines, ...gojoLines, ...heartLines];
+      animateLines(heartLines, 2500);
+    });
+  });
+}
+
+// Add J letter path
+letterPaths.J = [
+  [1, 0, 1, 0.8],       // Right vertical
+  [1, 0.8, 0.8, 1],     // Bottom curve
+  [0.8, 1, 0.2, 1],     // Bottom
+  [0.2, 1, 0, 0.8]      // Left curve
+];
 
 // ============ 2. PHOTO RAIN ============
 const samplePhotos = [
@@ -226,30 +385,26 @@ const samplePhotos = [
 function demo2_photoRain() {
   const container = document.getElementById('photoRain');
   container.innerHTML = '';
-  
   let count = 0;
   const interval = setInterval(() => {
     if (count >= 25) { clearInterval(interval); return; }
     count++;
-    
     const photo = document.createElement('div');
     photo.className = 'falling-photo';
     photo.style.left = (Math.random() * 90 + 5) + '%';
     photo.style.animationDuration = (4 + Math.random() * 3) + 's';
     photo.style.setProperty('--startRot', (Math.random() * 60 - 30) + 'deg');
     photo.style.setProperty('--endRot', (Math.random() * 60 - 30) + 'deg');
-    
     const img = document.createElement('img');
     img.src = samplePhotos[Math.floor(Math.random() * samplePhotos.length)];
     img.onerror = () => photo.remove();
     photo.appendChild(img);
-    
     container.appendChild(photo);
     setTimeout(() => photo.remove(), 7000);
   }, 200);
 }
 
-// ============ 3. HEART MINI GAME ============
+// ============ 3. HEART GAME ============
 let gameActive = false;
 let heartsCaught = 0;
 let gameInterval = null;
@@ -258,21 +413,16 @@ function demo3_heartGame() {
   if (gameActive) return;
   gameActive = true;
   heartsCaught = 0;
-  
   const overlay = document.getElementById('gameOverlay');
   const winBox = document.getElementById('gameWin');
   winBox.classList.remove('show');
   overlay.innerHTML = '';
   overlay.classList.add('active');
-  
-  // Counter
   let counter = document.createElement('div');
   counter.className = 'game-counter';
   counter.id = 'gameCounter';
   counter.textContent = '💕 Catch 10 hearts! (0/10)';
   document.body.appendChild(counter);
-  
-  // Spawn hearts
   gameInterval = setInterval(() => {
     if (!gameActive) return;
     const heart = document.createElement('div');
@@ -281,7 +431,6 @@ function demo3_heartGame() {
     heart.style.left = (Math.random() * 90 + 5) + '%';
     heart.style.animationDuration = (3 + Math.random() * 2) + 's';
     heart.style.fontSize = (30 + Math.random() * 25) + 'px';
-    
     heart.addEventListener('click', () => {
       if (heart.classList.contains('popped')) return;
       heart.classList.add('popped');
@@ -289,7 +438,6 @@ function demo3_heartGame() {
       document.getElementById('gameCounter').textContent = `💕 Catch 10 hearts! (${heartsCaught}/10)`;
       if (heartsCaught >= 10) endGame();
     });
-    
     overlay.appendChild(heart);
     setTimeout(() => heart.remove(), 5000);
   }, 500);
