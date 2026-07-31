@@ -3312,12 +3312,35 @@ Happy Girlfriend Day, Kalu. I love you.`;
       }, 1500);
     });
     const fhContainer = document.getElementById('floatingHearts');
-    setInterval(() => {
-      const h = document.createElement('span'); h.className = 'fh'; h.textContent = ['💗', '💕', '❤️', '💖'][Math.floor(Math.random() * 4)];
-      h.style.left = Math.random() * 100 + '%'; h.style.setProperty('--drift', (Math.random() * 100 - 50) + 'px');
-      h.style.animationDuration = (4 + Math.random() * 4) + 's'; h.style.fontSize = (14 + Math.random() * 16) + 'px';
-      fhContainer.appendChild(h); setTimeout(() => h.remove(), 9000);
-    }, 600);
+    let heartsInterval = null;
+
+    function spawnFinaleHeart() {
+      const h = document.createElement('span');
+      h.className = 'fh';
+      h.textContent = ['💗', '💕', '❤️', '💖'][Math.floor(Math.random() * 4)];
+      h.style.left = Math.random() * 100 + '%';
+      h.style.setProperty('--drift', (Math.random() * 100 - 50) + 'px');
+      h.style.animationDuration = (4 + Math.random() * 4) + 's';
+      h.style.fontSize = (14 + Math.random() * 16) + 'px';
+      fhContainer.appendChild(h);
+      setTimeout(() => h.remove(), 9000);
+    }
+
+    // Only spawn hearts when finale section is visible
+    new IntersectionObserver((entries) => {
+      entries.forEach(entry => {
+        if (entry.isIntersecting) {
+          if (!heartsInterval) {
+            heartsInterval = setInterval(spawnFinaleHeart, 800); // Slightly slower
+          }
+        } else {
+          if (heartsInterval) {
+            clearInterval(heartsInterval);
+            heartsInterval = null;
+          }
+        }
+      });
+    }, { threshold: 0.3 }).observe(document.getElementById('finale'));
 
     /* ---------- Stickers ---------- */
     document.querySelectorAll('.sticker').forEach(st => {
