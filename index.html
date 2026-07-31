@@ -4309,7 +4309,7 @@ Happy Girlfriend Day, mentosss. I love you — ass tujhi and all. 😄❤️`;
       });
     })();
 
-    /* ============ SIMPLE BURN ANIMATION (FIXED) ============ */
+    /* ============ REAL VISIBLE BURN ANIMATION ============ */
     (function () {
       let burnStarted = false;
 
@@ -4320,17 +4320,34 @@ Happy Girlfriend Day, mentosss. I love you — ass tujhi and all. 😄❤️`;
         console.log('🔥 Starting burn animation');
 
         const messageBox = document.getElementById('secretMessage');
-        if (!messageBox) {
-          console.log('❌ No secret message found');
-          return;
-        }
+        if (!messageBox) return;
 
         const w = messageBox.offsetWidth;
         const h = messageBox.offsetHeight;
 
-        const canvas = document.createElement('canvas');
-        canvas.className = 'burn-canvas';
-        canvas.style.cssText = `
+        // MASK layer - this actually "eats" away the note visually
+        const maskCanvas = document.createElement('canvas');
+        maskCanvas.width = w;
+        maskCanvas.height = h;
+        maskCanvas.style.cssText = `
+      position: absolute;
+      top: 0;
+      left: 0;
+      width: 100%;
+      height: 100%;
+      pointer-events: none;
+      z-index: 5;
+      mix-blend-mode: multiply;
+    `;
+        messageBox.style.position = 'relative';
+        messageBox.appendChild(maskCanvas);
+        const maskCtx = maskCanvas.getContext('2d');
+
+        // FIRE layer - the burning edge with flames
+        const fireCanvas = document.createElement('canvas');
+        fireCanvas.width = w;
+        fireCanvas.height = h;
+        fireCanvas.style.cssText = `
       position: absolute;
       top: 0;
       left: 0;
@@ -4339,144 +4356,202 @@ Happy Girlfriend Day, mentosss. I love you — ass tujhi and all. 😄❤️`;
       pointer-events: none;
       z-index: 10;
     `;
-        canvas.width = w;
-        canvas.height = h;
-        messageBox.appendChild(canvas);
-        const ctx = canvas.getContext('2d');
+        messageBox.appendChild(fireCanvas);
+        const fireCtx = fireCanvas.getContext('2d');
 
         const burnDuration = 8000;
         const startTime = performance.now();
         const embers = [];
+        const flames = [];
+
+        // Create burn front points that spread naturally
+        const burnFront = [];
+        // Start from top-left corner
+        burnFront.push({ x: 0, y: 0, spread: 0 });
 
         function drawBurn(now) {
           const elapsed = now - startTime;
           const progress = Math.min(elapsed / burnDuration, 1);
           const t = elapsed / 1000;
 
-          ctx.clearRect(0, 0, w, h);
+          // Clear both canvases
+          maskCtx.clearRect(0, 0, w, h);
+          fireCtx.clearRect(0, 0, w, h);
 
+          // === LAYER 1: BURN MASK (eats away the paper) ===
+          // Fill with white (visible), burn area becomes black (invisible via multiply blend)
+          maskCtx.fillStyle = 'white';
+          maskCtx.fillRect(0, 0, w, h);
+
+          // Calculate burn radius from top-left with irregular edge
           const maxDist = Math.hypot(w, h);
-          // Ensure burnDist is always at least 5px to prevent errors
-          const burnDist = Math.max(5, progress * maxDist * 1.2);
+          const baseRadius = progress * maxDist * 1.15;
 
-          // Draw burn area with wavy edge
-          ctx.save();
-          ctx.beginPath();
-          ctx.moveTo(0, 0);
+          // Draw the "burned away" area with noise for organic edge
+          maskCtx.save();
+          maskCtx.beginPath();
+          maskCtx.moveTo(0, 0);
 
-          const numPoints = 40;
-          for (let i = 0; i <= numPoints; i++) {
-            const angle = (i / numPoints) * Math.PI / 2;
-            const wave = Math.sin(angle * 8 + t * 2) * 15 + Math.cos(angle * 12 - t * 1.5) * 8;
-            const r = Math.max(1, burnDist + wave);
+          const segments = 60;
+          const burnPoints = [];
+          for (let i = 0; i <= segments; i++) {
+            const angle = (i / segments) * Math.PI / 2;
+            // Multiple frequency waves for organic edge
+            const wave1 = Math.sin(angle * 6 + t * 1.5) * 20;
+            const wave2 = Math.cos(angle * 11 - t * 2) * 12;
+            const wave3 = Math.sin(angle * 20 + t * 3) * 6;
+            const r = Math.max(1, baseRadius + wave1 + wave2 + wave3);
             const x = Math.cos(angle) * r;
             const y = Math.sin(angle) * r;
-            ctx.lineTo(x, y);
+            burnPoints.push({ x, y, angle });
+            maskCtx.lineTo(x, y);
           }
 
-          ctx.lineTo(0, h);
-          ctx.lineTo(0, 0);
-          ctx.closePath();
-          ctx.clip();
+          maskCtx.lineTo(0, h);
+          maskCtx.closePath();
 
-          // Fill with black char
-          ctx.fillStyle = 'rgb(15, 8, 3)';
-          ctx.fillRect(0, 0, w, h);
+          // Black area = will disappear (multiply with white background = transparent)
+          maskCtx.fillStyle = 'black';
+          maskCtx.fill();
+          maskCtx.restore();
 
-          // Glow near edge — FIXED with Math.max to prevent negative radii
-          const innerR = Math.max(1, burnDist * 0.7);
-          const outerR = Math.max(innerR + 1, burnDist);
-          const grad = ctx.createRadialGradient(0, 0, innerR, 0, 0, outerR);
-          grad.addColorStop(0, 'rgba(15, 8, 3, 0)');
-          grad.addColorStop(0.7, 'rgba(80, 30, 10, 0.7)');
-          grad.addColorStop(0.9, 'rgba(220, 80, 20, 0.8)');
-          grad.addColorStop(1, 'rgba(255, 180, 60, 0.95)');
-          ctx.fillStyle = grad;
-          ctx.fillRect(0, 0, w, h);
+          // === LAYER 2: CHARRED EDGE (dark brown burnt paper) ===
+          fireCtx.save();
+          fireCtx.beginPath();
+          fireCtx.moveTo(0, 0);
+          burnPoints.forEach(p => fireCtx.lineTo(p.x, p.y));
+          fireCtx.lineTo(0, h);
+          fireCtx.closePath();
+          fireCtx.clip();
 
-          ctx.restore();
+          // Charred paper effect - dark brown gradient
+          const charGrad = fireCtx.createRadialGradient(
+            0, 0, Math.max(1, baseRadius * 0.85),
+            0, 0, Math.max(2, baseRadius * 1.05)
+          );
+          charGrad.addColorStop(0, 'rgba(0, 0, 0, 0)');
+          charGrad.addColorStop(0.5, 'rgba(30, 15, 5, 0.8)');
+          charGrad.addColorStop(0.85, 'rgba(80, 30, 10, 0.95)');
+          charGrad.addColorStop(1, 'rgba(140, 50, 15, 1)');
+          fireCtx.fillStyle = charGrad;
+          fireCtx.fillRect(0, 0, w, h);
 
-          // Flame highlights at edge
-          ctx.globalCompositeOperation = 'screen';
-          for (let i = 0; i < 20; i++) {
-            const angle = Math.random() * Math.PI / 2;
-            const r = burnDist * (0.9 + Math.random() * 0.15);
-            const fx = Math.cos(angle) * r;
-            const fy = Math.sin(angle) * r;
+          fireCtx.restore();
 
-            if (fx >= 0 && fx <= w && fy >= 0 && fy <= h) {
-              const size = 12 + Math.random() * 15;
-              const intensity = 0.5 + Math.random() * 0.3;
-              const flameGrad = ctx.createRadialGradient(fx, fy, 0, fx, fy, size);
-              flameGrad.addColorStop(0, `rgba(255, 220, 130, ${intensity})`);
-              flameGrad.addColorStop(0.4, `rgba(255, 130, 30, ${intensity * 0.6})`);
-              flameGrad.addColorStop(1, 'rgba(180, 40, 10, 0)');
-              ctx.fillStyle = flameGrad;
-              ctx.beginPath();
-              ctx.arc(fx, fy, size, 0, Math.PI * 2);
-              ctx.fill();
+          // === LAYER 3: GLOWING FIRE EDGE ===
+          // Bright orange/red glow right at the burn line
+          burnPoints.forEach((p, i) => {
+            if (i % 2 !== 0) return; // Every other point for performance
+
+            const size = 20 + Math.random() * 15;
+            const glowGrad = fireCtx.createRadialGradient(p.x, p.y, 0, p.x, p.y, size);
+            glowGrad.addColorStop(0, 'rgba(255, 240, 150, 0.9)');
+            glowGrad.addColorStop(0.3, 'rgba(255, 150, 40, 0.7)');
+            glowGrad.addColorStop(0.7, 'rgba(220, 60, 15, 0.4)');
+            glowGrad.addColorStop(1, 'rgba(180, 30, 10, 0)');
+            fireCtx.fillStyle = glowGrad;
+            fireCtx.beginPath();
+            fireCtx.arc(p.x, p.y, size, 0, Math.PI * 2);
+            fireCtx.fill();
+          });
+
+          // === LAYER 4: LICKING FLAMES ABOVE BURN EDGE ===
+          // Spawn flame particles
+          if (progress < 0.95 && Math.random() < 0.9) {
+            for (let k = 0; k < 3; k++) {
+              const pt = burnPoints[Math.floor(Math.random() * burnPoints.length)];
+              if (pt) {
+                flames.push({
+                  x: pt.x,
+                  y: pt.y,
+                  vx: (Math.random() - 0.5) * 0.5,
+                  vy: -Math.random() * 1.2 - 0.3,
+                  life: 1,
+                  size: 8 + Math.random() * 12,
+                  hue: 15 + Math.random() * 30 // orange range
+                });
+              }
             }
           }
-          ctx.globalCompositeOperation = 'source-over';
 
-          // Embers
+          // Update and draw flames
+          for (let i = flames.length - 1; i >= 0; i--) {
+            const f = flames[i];
+            f.life -= 0.025;
+            f.x += f.vx;
+            f.y += f.vy;
+            f.size *= 1.02; // Grow as it rises
+
+            if (f.life <= 0) { flames.splice(i, 1); continue; }
+
+            // Flame color shifts from yellow-white to red as it dies
+            const flameHue = f.hue + (1 - f.life) * 20;
+            const flameGrad = fireCtx.createRadialGradient(f.x, f.y, 0, f.x, f.y, Math.max(1, f.size));
+            flameGrad.addColorStop(0, `hsla(${60 - (1 - f.life) * 30}, 100%, ${70 + f.life * 20}%, ${f.life * 0.7})`);
+            flameGrad.addColorStop(0.4, `hsla(${flameHue}, 100%, 50%, ${f.life * 0.5})`);
+            flameGrad.addColorStop(1, `hsla(${flameHue - 10}, 100%, 30%, 0)`);
+            fireCtx.fillStyle = flameGrad;
+            fireCtx.beginPath();
+            fireCtx.arc(f.x, f.y, f.size, 0, Math.PI * 2);
+            fireCtx.fill();
+          }
+
+          // === LAYER 5: EMBERS FLOATING UP ===
           if (progress < 0.95 && Math.random() < 0.7) {
-            const angle = Math.random() * Math.PI / 2;
-            const r = burnDist * 0.9;
-            embers.push({
-              x: Math.cos(angle) * r,
-              y: Math.sin(angle) * r,
-              vx: (Math.random() - 0.3) * 1.5,
-              vy: -Math.random() * 2.5 - 0.5,
-              life: 1,
-              size: 0.8 + Math.random() * 1.5
-            });
+            const pt = burnPoints[Math.floor(Math.random() * burnPoints.length)];
+            if (pt) {
+              embers.push({
+                x: pt.x,
+                y: pt.y,
+                vx: (Math.random() - 0.3) * 2,
+                vy: -Math.random() * 3 - 1,
+                life: 1,
+                size: 0.5 + Math.random() * 1.5
+              });
+            }
           }
 
           for (let i = embers.length - 1; i >= 0; i--) {
             const e = embers[i];
-            e.life -= 0.02;
+            e.life -= 0.015;
             e.x += e.vx;
             e.y += e.vy;
-            e.vy += 0.04;
+            e.vy += 0.03;
+            e.vx += (Math.random() - 0.5) * 0.15;
             if (e.life <= 0) { embers.splice(i, 1); continue; }
 
-            // Safe glow with Math.max
-            const emberOuterR = Math.max(1, e.size * 3);
-            const glowGrad = ctx.createRadialGradient(e.x, e.y, 0, e.x, e.y, emberOuterR);
-            glowGrad.addColorStop(0, `rgba(255, 200, 100, ${e.life * 0.7})`);
-            glowGrad.addColorStop(1, 'rgba(255, 100, 20, 0)');
-            ctx.fillStyle = glowGrad;
-            ctx.beginPath();
-            ctx.arc(e.x, e.y, emberOuterR, 0, Math.PI * 2);
-            ctx.fill();
+            // Bright ember with glow
+            const emberOuterR = Math.max(1, e.size * 4);
+            const glowGrad = fireCtx.createRadialGradient(e.x, e.y, 0, e.x, e.y, emberOuterR);
+            glowGrad.addColorStop(0, `rgba(255, 220, 100, ${e.life * 0.9})`);
+            glowGrad.addColorStop(0.4, `rgba(255, 120, 40, ${e.life * 0.5})`);
+            glowGrad.addColorStop(1, 'rgba(200, 50, 10, 0)');
+            fireCtx.fillStyle = glowGrad;
+            fireCtx.beginPath();
+            fireCtx.arc(e.x, e.y, emberOuterR, 0, Math.PI * 2);
+            fireCtx.fill();
 
-            const coreSize = Math.max(0.1, e.size * e.life);
-            ctx.fillStyle = `rgba(255, ${150 + e.life * 100}, 50, ${e.life * 0.95})`;
-            ctx.beginPath();
-            ctx.arc(e.x, e.y, coreSize, 0, Math.PI * 2);
-            ctx.fill();
+            // Bright core
+            fireCtx.fillStyle = `rgba(255, ${180 + e.life * 60}, 60, ${e.life})`;
+            fireCtx.beginPath();
+            fireCtx.arc(e.x, e.y, Math.max(0.3, e.size * e.life), 0, Math.PI * 2);
+            fireCtx.fill();
           }
 
-          // Darken and shrink note
-          messageBox.style.filter = `brightness(${1 - progress * 0.85}) contrast(${1 + progress * 0.4})`;
-          messageBox.style.transform = `scale(${1 - progress * 0.04})`;
-          messageBox.style.transformOrigin = 'top left';
-
-          if (progress < 1 || embers.length > 0) {
+          if (progress < 1 || embers.length > 0 || flames.length > 0) {
             requestAnimationFrame(drawBurn);
           } else {
             console.log('🔥 Burn complete');
             setTimeout(() => {
-              messageBox.style.transition = 'opacity 1.2s ease, transform 1.2s ease';
+              messageBox.style.transition = 'opacity 1s ease, transform 1s ease';
               messageBox.style.opacity = '0';
-              messageBox.style.transform = `scale(0.7) rotate(-2deg)`;
+              messageBox.style.transform = 'scale(0.9)';
 
               const secretSection = document.getElementById('secret');
               if (secretSection) {
                 const sectionInner = secretSection.querySelector('.section-inner');
                 if (sectionInner) {
-                  sectionInner.style.transition = 'opacity 1.5s ease';
+                  sectionInner.style.transition = 'opacity 1.2s ease';
                   sectionInner.style.opacity = '0';
                 }
               }
@@ -4489,7 +4564,7 @@ Happy Girlfriend Day, mentosss. I love you — ass tujhi and all. 😄❤️`;
                   document.body.style.overflow = '';
                   window.reopenConstellationPermanent();
                 }
-              }, 1500);
+              }, 1200);
             }, 300);
           }
         }
