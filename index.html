@@ -2442,7 +2442,8 @@
       <h2 class="reveal">🔒 A Locked Secret</h2>
       <p class="desc reveal">Some things are only for Kalu. You already know the code — it's the day it all began.</p>
       <div class="lock-box reveal">
-        <input type="text" id="secretInput" maxlength="6" placeholder="DDMMYY" inputmode="numeric">
+        <input type="text" id="secretInput" maxlength="6" placeholder="DDMMYY" inputmode="numeric" autocomplete="off"
+          autocorrect="off" autocapitalize="off" spellcheck="false" data-lpignore="true" data-form-type="other">
         <button id="unlockBtn">Unlock</button>
       </div>
       <p id="lockError"></p>
@@ -4307,15 +4308,9 @@ Happy Girlfriend Day, mentosss. I love you — ass tujhi and all. 😄❤️`;
       });
     })();
 
-    /* ============ REALISTIC NOTE BURNING ANIMATION ============ */
+    /* ============ SIMPLE PLASMA BURN ANIMATION ============ */
     (function () {
       let burnStarted = false;
-
-      function noise(x, y, t) {
-        return Math.sin(x * 0.05 + t) * Math.cos(y * 0.05 - t * 0.7) +
-          Math.sin(x * 0.1 + t * 1.3) * 0.5 +
-          Math.cos(y * 0.08 + t * 0.9) * 0.3;
-      }
 
       function startBurning() {
         if (burnStarted) return;
@@ -4327,6 +4322,7 @@ Happy Girlfriend Day, mentosss. I love you — ass tujhi and all. 😄❤️`;
         const w = messageBox.offsetWidth;
         const h = messageBox.offsetHeight;
 
+        // Single lightweight canvas
         const canvas = document.createElement('canvas');
         canvas.className = 'burn-canvas';
         canvas.width = w;
@@ -4334,27 +4330,11 @@ Happy Girlfriend Day, mentosss. I love you — ass tujhi and all. 😄❤️`;
         messageBox.appendChild(canvas);
         const ctx = canvas.getContext('2d');
 
-        const smokeCanvas = document.createElement('canvas');
-        smokeCanvas.style.cssText = `
-      position: absolute;
-      top: -${h}px;
-      left: 0;
-      width: ${w}px;
-      height: ${h * 2}px;
-      pointer-events: none;
-      z-index: 11;
-    `;
-        smokeCanvas.width = w;
-        smokeCanvas.height = h * 2;
-        messageBox.appendChild(smokeCanvas);
-        const smokeCtx = smokeCanvas.getContext('2d');
-
         setTimeout(() => canvas.classList.add('active'), 100);
 
-        const burnDuration = 18000;
+        const burnDuration = 8000; // Faster: 8 seconds (was 18s)
         const startTime = performance.now();
         const embers = [];
-        const smokeParticles = [];
 
         function drawBurn(now) {
           const elapsed = now - startTime;
@@ -4362,200 +4342,126 @@ Happy Girlfriend Day, mentosss. I love you — ass tujhi and all. 😄❤️`;
           const t = elapsed / 1000;
 
           ctx.clearRect(0, 0, w, h);
-          smokeCtx.clearRect(0, 0, w, h * 2);
 
+          // PLASMA BURN — diagonal burn line from top-left with wavy edge
           const maxDist = Math.hypot(w, h);
-          const burnFrontDist = progress * maxDist * 1.15;
+          const burnDist = progress * maxDist * 1.15;
 
-          const imageData = ctx.createImageData(w, h);
-          const data = imageData.data;
+          // Save context for clipping
+          ctx.save();
 
-          const step = 2;
-          for (let y = 0; y < h; y += step) {
-            for (let x = 0; x < w; x += step) {
-              const noiseVal = noise(x, y, t * 0.3) * 25;
-              const dist = Math.hypot(x, y) + noiseVal;
-              const distFromFront = burnFrontDist - dist;
+          // Create the burn shape as a clipping path (fast!)
+          ctx.beginPath();
+          // Sample points along the burn front for wavy edge
+          const numPoints = 40;
+          ctx.moveTo(0, 0);
 
-              let r = 0, g = 0, b = 0, a = 0;
-
-              if (distFromFront > 20) {
-                const charNoise = noise(x * 0.5, y * 0.5, t * 0.1);
-                const darkness = 15 + charNoise * 8;
-                r = darkness;
-                g = darkness * 0.6;
-                b = darkness * 0.3;
-                a = 255;
-              } else if (distFromFront > 5) {
-                const charProgress = (distFromFront - 5) / 15;
-                r = 40 * (1 - charProgress) + 15 * charProgress;
-                g = 20 * (1 - charProgress) + 9 * charProgress;
-                b = 10 * (1 - charProgress) + 5 * charProgress;
-                a = 255;
-              } else if (distFromFront > -8) {
-                const emberProgress = (distFromFront + 8) / 13;
-                const flicker = 0.85 + Math.sin(t * 10 + x * 0.5 + y * 0.3) * 0.15;
-                r = (255 - 100 * (1 - emberProgress)) * flicker;
-                g = (80 + 100 * emberProgress) * flicker;
-                b = (20 + 30 * emberProgress) * flicker;
-                a = 240;
-              } else if (distFromFront > -25) {
-                const flameProgress = (distFromFront + 25) / 17;
-                const flicker = 0.7 + Math.sin(t * 15 + x * 0.4 + y * 0.6) * 0.3;
-                r = (255) * flicker;
-                g = (180 + 60 * flameProgress) * flicker;
-                b = (60 * flameProgress) * flicker;
-                a = 180 * flicker;
-              } else if (distFromFront > -50) {
-                const heatProgress = (distFromFront + 50) / 25;
-                r = 60 * heatProgress;
-                g = 30 * heatProgress;
-                b = 10 * heatProgress;
-                a = 40 * heatProgress;
-              }
-
-              for (let dy = 0; dy < step && y + dy < h; dy++) {
-                for (let dx = 0; dx < step && x + dx < w; dx++) {
-                  const idx = ((y + dy) * w + (x + dx)) * 4;
-                  data[idx] = r;
-                  data[idx + 1] = g;
-                  data[idx + 2] = b;
-                  data[idx + 3] = a;
-                }
-              }
-            }
+          // Top edge of burn
+          for (let i = 0; i <= numPoints; i++) {
+            const angle = (i / numPoints) * Math.PI / 2;
+            const wave = Math.sin(angle * 8 + t * 2) * 15 + Math.cos(angle * 12 - t * 1.5) * 8;
+            const r = burnDist + wave;
+            const x = Math.cos(angle) * r;
+            const y = Math.sin(angle) * r;
+            ctx.lineTo(x, y);
           }
-          ctx.putImageData(imageData, 0, 0);
+          ctx.closePath();
+          ctx.clip();
 
+          // Fill the entire burn area with layered plasma effect
+
+          // Layer 1: Deep black char base
+          ctx.fillStyle = 'rgb(15, 8, 3)';
+          ctx.fillRect(0, 0, w, h);
+
+          // Layer 2: Plasma glow near the edge only (radial gradient)
+          const grad = ctx.createRadialGradient(0, 0, burnDist * 0.7, 0, 0, burnDist);
+          grad.addColorStop(0, 'rgba(15, 8, 3, 0)');
+          grad.addColorStop(0.6, 'rgba(80, 30, 10, 0.6)');
+          grad.addColorStop(0.85, 'rgba(220, 80, 20, 0.7)');
+          grad.addColorStop(1, 'rgba(255, 180, 60, 0.9)');
+          ctx.fillStyle = grad;
+          ctx.fillRect(0, 0, w, h);
+
+          ctx.restore();
+
+          // Draw flickering flame edge (outside clip)
           ctx.globalCompositeOperation = 'screen';
-          for (let i = 0; i < 40; i++) {
+          for (let i = 0; i < 25; i++) {
             const angle = Math.random() * Math.PI / 2;
-            const frontR = burnFrontDist * (0.85 + Math.random() * 0.15);
-            const fx = Math.cos(angle) * frontR + noise(i, t, t * 0.5) * 20;
-            const fy = Math.sin(angle) * frontR + noise(i * 2, t, t * 0.5) * 20;
+            const r = burnDist * (0.9 + Math.random() * 0.15);
+            const fx = Math.cos(angle) * r;
+            const fy = Math.sin(angle) * r;
 
             if (fx >= 0 && fx <= w && fy >= 0 && fy <= h) {
-              const flameSize = 15 + Math.random() * 20;
-              const flameGrad = ctx.createRadialGradient(fx, fy, 0, fx, fy, flameSize);
+              const size = 12 + Math.random() * 15;
               const intensity = 0.4 + Math.random() * 0.4;
-              flameGrad.addColorStop(0, `rgba(255, 230, 150, ${intensity})`);
-              flameGrad.addColorStop(0.3, `rgba(255, 150, 40, ${intensity * 0.6})`);
-              flameGrad.addColorStop(0.7, `rgba(200, 60, 15, ${intensity * 0.3})`);
-              flameGrad.addColorStop(1, 'rgba(150, 30, 10, 0)');
+              const flameGrad = ctx.createRadialGradient(fx, fy, 0, fx, fy, size);
+              flameGrad.addColorStop(0, `rgba(255, 220, 130, ${intensity})`);
+              flameGrad.addColorStop(0.4, `rgba(255, 130, 30, ${intensity * 0.6})`);
+              flameGrad.addColorStop(1, 'rgba(180, 40, 10, 0)');
               ctx.fillStyle = flameGrad;
               ctx.beginPath();
-              ctx.arc(fx, fy, flameSize, 0, Math.PI * 2);
+              ctx.arc(fx, fy, size, 0, Math.PI * 2);
               ctx.fill();
             }
           }
           ctx.globalCompositeOperation = 'source-over';
 
-          if (progress < 0.95 && Math.random() < 0.8) {
-            for (let i = 0; i < 3; i++) {
-              const angle = Math.random() * Math.PI / 2;
-              const r = burnFrontDist * (0.85 + Math.random() * 0.1);
-              const ex = Math.cos(angle) * r;
-              const ey = Math.sin(angle) * r;
-              if (ex >= 0 && ex <= w && ey >= 0 && ey <= h) {
-                embers.push({
-                  x: ex, y: ey,
-                  vx: (Math.random() - 0.5) * 2 + 0.5,
-                  vy: -Math.random() * 3 - 1,
-                  life: 1,
-                  maxLife: 0.8 + Math.random() * 0.6,
-                  size: 0.5 + Math.random() * 2,
-                  temperature: 0.7 + Math.random() * 0.3
-                });
-              }
-            }
-          }
-
-          if (progress > 0.05 && progress < 0.95 && Math.random() < 0.5) {
-            for (let i = 0; i < 2; i++) {
-              const angle = Math.random() * Math.PI / 2;
-              const r = burnFrontDist * (0.6 + Math.random() * 0.3);
-              smokeParticles.push({
-                x: Math.cos(angle) * r,
-                y: Math.sin(angle) * r + h,
-                vx: (Math.random() - 0.3) * 0.5,
-                vy: -Math.random() * 1.5 - 0.5,
+          // Emit embers from burn edge
+          if (progress < 0.95 && Math.random() < 0.6) {
+            const angle = Math.random() * Math.PI / 2;
+            const r = burnDist * 0.9;
+            const ex = Math.cos(angle) * r;
+            const ey = Math.sin(angle) * r;
+            if (ex >= 0 && ex <= w && ey >= 0 && ey <= h) {
+              embers.push({
+                x: ex, y: ey,
+                vx: (Math.random() - 0.3) * 1.5,
+                vy: -Math.random() * 2.5 - 0.5,
                 life: 1,
-                size: 20 + Math.random() * 30,
-                growth: 0.3 + Math.random() * 0.4,
-                opacity: 0.15 + Math.random() * 0.15,
-                rotation: Math.random() * Math.PI * 2,
-                rotSpeed: (Math.random() - 0.5) * 0.02
+                size: 0.8 + Math.random() * 1.5
               });
             }
           }
 
+          // Draw embers (simple, lightweight)
           for (let i = embers.length - 1; i >= 0; i--) {
             const e = embers[i];
-            e.life -= 0.012;
+            e.life -= 0.02;
             e.x += e.vx;
             e.y += e.vy;
             e.vy += 0.04;
-            e.vx += (Math.random() - 0.5) * 0.15;
 
             if (e.life <= 0) { embers.splice(i, 1); continue; }
 
-            const rC = 255;
-            const gC = 100 + e.temperature * 155 * e.life;
-            const bC = 20 + e.temperature * 40 * e.life;
-
+            // Simple ember with glow
             const glowGrad = ctx.createRadialGradient(e.x, e.y, 0, e.x, e.y, e.size * 3);
-            glowGrad.addColorStop(0, `rgba(255, 220, 150, ${e.life * 0.6})`);
-            glowGrad.addColorStop(0.5, `rgba(${rC}, ${gC}, ${bC}, ${e.life * 0.3})`);
-            glowGrad.addColorStop(1, `rgba(200, 60, 20, 0)`);
+            glowGrad.addColorStop(0, `rgba(255, 200, 100, ${e.life * 0.7})`);
+            glowGrad.addColorStop(1, 'rgba(255, 100, 20, 0)');
             ctx.fillStyle = glowGrad;
             ctx.beginPath();
             ctx.arc(e.x, e.y, e.size * 3, 0, Math.PI * 2);
             ctx.fill();
 
-            ctx.fillStyle = `rgba(${rC}, ${gC}, ${bC}, ${e.life * 0.95})`;
+            // Bright core
+            ctx.fillStyle = `rgba(255, ${150 + e.life * 100}, 50, ${e.life * 0.95})`;
             ctx.beginPath();
             ctx.arc(e.x, e.y, e.size * e.life, 0, Math.PI * 2);
             ctx.fill();
           }
 
-          for (let i = smokeParticles.length - 1; i >= 0; i--) {
-            const s = smokeParticles[i];
-            s.life -= 0.005;
-            s.x += s.vx;
-            s.y += s.vy;
-            s.vy -= 0.005;
-            s.size += s.growth;
-            s.rotation += s.rotSpeed;
-
-            if (s.life <= 0 || s.y < -100) { smokeParticles.splice(i, 1); continue; }
-
-            smokeCtx.save();
-            smokeCtx.translate(s.x, s.y);
-            smokeCtx.rotate(s.rotation);
-
-            const smokeGrad = smokeCtx.createRadialGradient(0, 0, 0, 0, 0, s.size);
-            const grayValue = 60 + (1 - s.life) * 40;
-            smokeGrad.addColorStop(0, `rgba(${grayValue}, ${grayValue}, ${grayValue}, ${s.opacity * s.life})`);
-            smokeGrad.addColorStop(0.6, `rgba(${grayValue * 0.7}, ${grayValue * 0.7}, ${grayValue * 0.7}, ${s.opacity * s.life * 0.5})`);
-            smokeGrad.addColorStop(1, 'rgba(30, 30, 30, 0)');
-            smokeCtx.fillStyle = smokeGrad;
-            smokeCtx.beginPath();
-            smokeCtx.arc(0, 0, s.size, 0, Math.PI * 2);
-            smokeCtx.fill();
-
-            smokeCtx.restore();
-          }
-
-          const shrinkAmount = progress * 0.05;
+          // Progressive darkening & slight shrinking of note
           messageBox.style.filter = `brightness(${1 - progress * 0.85}) contrast(${1 + progress * 0.4})`;
-          messageBox.style.transform = `scale(${1 - shrinkAmount})`;
+          messageBox.style.transform = `scale(${1 - progress * 0.04})`;
           messageBox.style.transformOrigin = 'top left';
 
-          if (progress < 1 || embers.length > 0 || smokeParticles.length > 0) {
+          if (progress < 1 || embers.length > 0) {
             requestAnimationFrame(drawBurn);
           } else {
+            // FASTER final transition (was 3500ms, now 1500ms)
             setTimeout(() => {
-              messageBox.style.transition = 'opacity 2s ease, transform 2s ease';
+              messageBox.style.transition = 'opacity 1.2s ease, transform 1.2s ease';
               messageBox.style.opacity = '0';
               messageBox.style.transform = `scale(0.7) rotate(-2deg)`;
 
@@ -4563,11 +4469,12 @@ Happy Girlfriend Day, mentosss. I love you — ass tujhi and all. 😄❤️`;
               if (secretSection) {
                 const sectionInner = secretSection.querySelector('.section-inner');
                 if (sectionInner) {
-                  sectionInner.style.transition = 'opacity 3s ease';
+                  sectionInner.style.transition = 'opacity 1.5s ease';
                   sectionInner.style.opacity = '0';
                 }
               }
 
+              // Faster constellation reveal (was 3500ms, now 1500ms)
               setTimeout(() => {
                 if (typeof window.reopenConstellationPermanent === 'function') {
                   document.body.classList.remove('constellation-open');
@@ -4576,13 +4483,14 @@ Happy Girlfriend Day, mentosss. I love you — ass tujhi and all. 😄❤️`;
                   document.body.style.overflow = '';
                   window.reopenConstellationPermanent();
                 }
-              }, 3500);
-            }, 500);
+              }, 1500);
+            }, 300); // Was 500
           }
         }
         requestAnimationFrame(drawBurn);
       }
 
+      // Watch for the secret message to become visible
       const checkInterval = setInterval(() => {
         const msg = document.getElementById('secretMessage');
         if (msg && msg.classList.contains('show')) {
