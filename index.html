@@ -2085,59 +2085,6 @@
       min-height: 700px;
       justify-content: center;
     }
-
-    /* Smooth scroll performance optimizations */
-    .section {
-      transform: translateZ(0);
-      backface-visibility: hidden;
-      will-change: transform;
-      contain: layout style;
-    }
-
-    /* Prevent expensive repaints during scroll */
-    .section-media,
-    .section-overlay {
-      transform: translateZ(0);
-      will-change: auto;
-    }
-
-    /* Isolate fixed elements from scroll */
-    #stars,
-    #scrollProgress,
-    .dot-nav,
-    #musicToggle,
-    #fullscreenBtn,
-    .floating-note,
-    .tap-music-prompt,
-    #customCursor {
-      will-change: transform;
-      contain: layout style paint;
-    }
-
-    /* Force GPU acceleration on animated elements */
-    .floating-photo,
-    .fh,
-    .cursor-heart,
-    .click-sparkle,
-    .hand,
-    .paw,
-    .chat-bubble,
-    .reveal {
-      transform: translateZ(0);
-      backface-visibility: hidden;
-    }
-
-    /* Prevent scroll jitter from long sections */
-    .section.compact {
-      min-height: 60vh;
-    }
-
-    /* Smoother transitions */
-    @supports (scroll-behavior: smooth) {
-      html {
-        scroll-behavior: smooth;
-      }
-    }
   </style>
 </head>
 
