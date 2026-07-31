@@ -2714,19 +2714,19 @@
     document.addEventListener('click', (e) => { spawnSparkles(e.clientX, e.clientY); }, true);
 
     /* ============ VIDEO OPTIMIZATION ============ */
-    const videoObserver = new IntersectionObserver((entries) => {
-      entries.forEach(entry => {
-        const video = entry.target;
-        if (entry.isIntersecting) {
-          video.play().catch(() => { });
-        } else {
-          video.pause();
-        }
-      });
-    }, { threshold: 0.25 });
+    // const videoObserver = new IntersectionObserver((entries) => {
+    //   entries.forEach(entry => {
+    //     const video = entry.target;
+    //     if (entry.isIntersecting) {
+    //       video.play().catch(() => { });
+    //     } else {
+    //       video.pause();
+    //     }
+    //   });
+    // }, { threshold: 0.25 });
 
-    // Observe all videos
-    document.querySelectorAll('video').forEach(v => videoObserver.observe(v));
+    // // Observe all videos
+    // document.querySelectorAll('video').forEach(v => videoObserver.observe(v));
 
     /* ---------- SMART BACKGROUND MEDIA INJECTOR (PRELOAD BUT DON'T PLAY) ---------- */
     document.querySelectorAll('.section[data-bg-img], .section[data-bg-video]').forEach(sec => {
@@ -3248,7 +3248,7 @@ Happy Girlfriend Day, Kalu. I love you.`;
         const vid = document.createElement('video');
         vid.src = src; vid.muted = true; vid.loop = true; vid.playsInline = true;
         vid.setAttribute('muted', ''); vid.setAttribute('playsinline', '');
-        vid.preload = 'auto'; // ← Preloads video data in background
+        vid.preload = 'metadata'; // Only load metadata for carousel (saves bandwidth)
         vid.addEventListener('loadeddata', () => frame.classList.add('has-media'));
         vid.addEventListener('error', () => { frame.textContent = `📹 Add ${src}`; });
         const badge = document.createElement('span'); badge.className = 'play-badge'; badge.textContent = '▶ video';
