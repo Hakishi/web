@@ -19,7 +19,7 @@
   
   #starCanvas { position: fixed; inset: 0; z-index: 1; }
   
-  .final-text { position: fixed; top: 50%; left: 50%; transform: translate(-50%, -50%); font-family: 'Dancing Script', cursive; font-size: clamp(1.5rem, 4vw, 2.5rem); color: rgba(255, 209, 102, 0.9); text-shadow: 0 0 20px #ffd166, 0 0 40px rgba(255, 209, 102, 0.5); opacity: 0; transition: opacity 2s ease; pointer-events: none; z-index: 5; text-align: center; }
+  .final-text { position: fixed; bottom: 8%; left: 50%; transform: translateX(-50%); font-family: 'Dancing Script', cursive; font-size: clamp(1.3rem, 3vw, 2rem); color: rgba(220, 230, 255, 0.85); text-shadow: 0 0 15px rgba(200, 220, 255, 0.6); opacity: 0; transition: opacity 2s ease; pointer-events: none; z-index: 5; text-align: center; letter-spacing: 2px; }
   .final-text.show { opacity: 1; }
 </style>
 <link href="https://fonts.googleapis.com/css2?family=Dancing+Script:wght@700&display=swap" rel="stylesheet">
@@ -30,7 +30,7 @@
 
 <div class="container">
   <h1>🌌 Constellation Preview</h1>
-  <p class="subtitle">The background stars are strategically placed. Tap to reveal.</p>
+  <p class="subtitle">Tap to reveal the hidden constellation</p>
   <button class="demo-btn" onclick="revealConstellation()">✨ Reveal Constellation</button>
   <button class="reset-btn" onclick="location.reload()">🔄 Reset</button>
 </div>
@@ -47,8 +47,7 @@ function resizeCanvas() {
   layoutStars();
 }
 
-// ============ LETTER DEFINITIONS (using minimal dots for readability) ============
-// Each letter is a stroke path: [[x, y], ...] where x, y are relative 0-1
+// ============ LETTER DEFINITIONS ============
 const letters = {
   K: {
     dots: [[0, 0], [0, 0.5], [0, 1], [0.7, 0], [0.35, 0.5], [0.7, 1]],
@@ -81,12 +80,9 @@ const letters = {
 };
 
 // ============ STARS ============
-// Background stars (random, non-constellation)
 let bgStars = [];
-
-// Constellation stars (positioned to form KALU + GOJO + Heart)
-let constellationDots = []; // Each dot: {x, y, letter, group, isRevealed, twinkleO, twinkleS}
-let constellationConnections = []; // Each: {from, to, progress, isRevealed}
+let constellationDots = [];
+let constellationConnections = [];
 
 function layoutStars() {
   const w = canvas.width;
@@ -94,18 +90,17 @@ function layoutStars() {
   const centerX = w / 2;
   const centerY = h / 2;
   
-  // Letter sizing
-  const letterHeight = Math.min(w * 0.09, h * 0.13, 90);
+  const letterHeight = Math.min(w * 0.08, h * 0.11, 80);
   const letterWidth = letterHeight * 0.7;
   const spacing = letterWidth * 0.55;
   
   constellationDots = [];
   constellationConnections = [];
   
-  // Build KALU (upper)
+  // KALU
   const kaluWidth = 4 * letterWidth + 3 * spacing;
   const kaluStartX = centerX - kaluWidth / 2;
-  const kaluY = centerY - letterHeight - 50;
+  const kaluY = centerY - letterHeight - 35;
   const kaluLetters = ['K', 'A', 'L', 'U'];
   
   let kaluDotIndex = 0;
@@ -121,7 +116,8 @@ function layoutStars() {
         group: 'kalu',
         isRevealed: false,
         twinkleO: Math.random() * 10,
-        twinkleS: Math.random() * 0.02 + 0.005
+        twinkleS: Math.random() * 0.02 + 0.005,
+        brightness: 0.7 + Math.random() * 0.3
       });
       kaluDotIndex++;
     });
@@ -136,10 +132,10 @@ function layoutStars() {
     });
   });
   
-  // Build GOJO (lower)
+  // GOJO
   const gojoWidth = 4 * letterWidth + 3 * spacing;
   const gojoStartX = centerX - gojoWidth / 2;
-  const gojoY = centerY + 50;
+  const gojoY = centerY + 35;
   const gojoLetters = ['G', 'O', 'J', 'O'];
   
   let gojoDotIndex = constellationDots.length;
@@ -155,7 +151,8 @@ function layoutStars() {
         group: 'gojo',
         isRevealed: false,
         twinkleO: Math.random() * 10,
-        twinkleS: Math.random() * 0.02 + 0.005
+        twinkleS: Math.random() * 0.02 + 0.005,
+        brightness: 0.7 + Math.random() * 0.3
       });
       gojoDotIndex++;
     });
@@ -170,25 +167,35 @@ function layoutStars() {
     });
   });
   
-  // Build Heart (surrounding both names)
-  const heartRadius = Math.min(kaluWidth, gojoWidth) * 0.75;
+  // HEART (large enough to contain both names)
+  const maxNameWidth = Math.max(kaluWidth, gojoWidth);
+  const totalNameHeight = (letterHeight + 35) * 2; // KALU + gap + GOJO
+  
+  // Heart size calculated to contain both names with padding
+  const heartWidth = maxNameWidth * 1.6; // 60% padding around widest name
+  const heartHeight = totalNameHeight * 1.4; // 40% padding vertical
+  
   const heartCenterX = centerX;
-  const heartCenterY = centerY + 20;
-  const numHeartPoints = 16;
+  const heartCenterY = centerY; // Perfectly centered between names
+  const numHeartPoints = 20;
   const heartStartIdx = constellationDots.length;
+  
+  // Heart parametric equation, scaled properly
+  const scaleX = heartWidth / 32;
+  const scaleY = heartHeight / 30;
   
   for (let i = 0; i < numHeartPoints; i++) {
     const t = (i / numHeartPoints) * Math.PI * 2;
     const hx = 16 * Math.pow(Math.sin(t), 3);
     const hy = -(13 * Math.cos(t) - 5 * Math.cos(2*t) - 2 * Math.cos(3*t) - Math.cos(4*t));
-    const scale = heartRadius / 32;
     constellationDots.push({
-      x: heartCenterX + hx * scale,
-      y: heartCenterY + hy * scale,
+      x: heartCenterX + hx * scaleX,
+      y: heartCenterY + hy * scaleY,
       group: 'heart',
       isRevealed: false,
       twinkleO: Math.random() * 10,
-      twinkleS: Math.random() * 0.02 + 0.005
+      twinkleS: Math.random() * 0.02 + 0.005,
+      brightness: 0.7 + Math.random() * 0.3
     });
   }
   
@@ -201,10 +208,10 @@ function layoutStars() {
     });
   }
   
-  // Now generate random background stars, AVOIDING constellation dot positions
+  // Generate background stars, avoiding constellation areas
   bgStars = [];
-  const numBgStars = 120; // Fewer stars for cleaner look
-  const minDist = 30; // Minimum distance from constellation dots
+  const numBgStars = 100;
+  const minDist = 35;
   
   let attempts = 0;
   while (bgStars.length < numBgStars && attempts < numBgStars * 5) {
@@ -212,7 +219,6 @@ function layoutStars() {
     const x = Math.random() * w;
     const y = Math.random() * h;
     
-    // Check distance from constellation dots
     const tooClose = constellationDots.some(d => Math.hypot(d.x - x, d.y - y) < minDist);
     if (tooClose) continue;
     
@@ -220,7 +226,8 @@ function layoutStars() {
       x, y,
       r: Math.random() * 1.2 + 0.3,
       o: Math.random() * 10,
-      s: Math.random() * 0.02 + 0.005
+      s: Math.random() * 0.02 + 0.005,
+      brightness: 0.6 + Math.random() * 0.4
     });
   }
 }
@@ -228,54 +235,54 @@ function layoutStars() {
 resizeCanvas();
 window.addEventListener('resize', resizeCanvas);
 
-// ============ ANIMATION LOOP ============
+// ============ DRAWING ============
 function draw() {
   ctx.clearRect(0, 0, canvas.width, canvas.height);
   
-  // 1. Draw background stars (always twinkling)
+  // Background stars (realistic silver-white)
   bgStars.forEach(st => {
     st.o += st.s;
-    const op = Math.abs(Math.sin(st.o)) * 0.6;
+    const op = Math.abs(Math.sin(st.o)) * st.brightness;
     ctx.beginPath();
     ctx.arc(st.x, st.y, st.r, 0, 7);
-    ctx.fillStyle = `rgba(255, 255, 255, ${op})`;
+    ctx.fillStyle = `rgba(240, 245, 255, ${op})`;
     ctx.fill();
   });
   
-  // 2. Draw constellation dots (they twinkle like background stars until revealed)
+  // Constellation dots
   constellationDots.forEach(dot => {
     dot.twinkleO += dot.twinkleS;
     
     if (dot.isRevealed) {
-      // Glowing revealed star
-      const glowGradient = ctx.createRadialGradient(dot.x, dot.y, 0, dot.x, dot.y, 12);
-      glowGradient.addColorStop(0, 'rgba(255, 209, 102, 0.9)');
-      glowGradient.addColorStop(0.5, 'rgba(255, 209, 102, 0.3)');
-      glowGradient.addColorStop(1, 'rgba(255, 209, 102, 0)');
+      // Realistic star: soft silver-white glow (like actual stars)
+      const glowGradient = ctx.createRadialGradient(dot.x, dot.y, 0, dot.x, dot.y, 10);
+      glowGradient.addColorStop(0, 'rgba(230, 240, 255, 0.6)');
+      glowGradient.addColorStop(0.4, 'rgba(200, 220, 255, 0.25)');
+      glowGradient.addColorStop(1, 'rgba(180, 200, 255, 0)');
       ctx.fillStyle = glowGradient;
       ctx.beginPath();
-      ctx.arc(dot.x, dot.y, 12, 0, 7);
+      ctx.arc(dot.x, dot.y, 10, 0, 7);
       ctx.fill();
       
-      // Bright core
+      // Bright silver core (real star color)
       ctx.beginPath();
-      ctx.arc(dot.x, dot.y, 2.5, 0, 7);
-      ctx.fillStyle = '#fff';
-      ctx.shadowBlur = 15;
-      ctx.shadowColor = '#ffd166';
+      ctx.arc(dot.x, dot.y, 2, 0, 7);
+      ctx.fillStyle = 'rgba(255, 255, 255, 0.95)';
+      ctx.shadowBlur = 8;
+      ctx.shadowColor = 'rgba(220, 230, 255, 0.8)';
       ctx.fill();
       ctx.shadowBlur = 0;
     } else {
-      // Regular twinkling background star (blends in)
-      const op = Math.abs(Math.sin(dot.twinkleO)) * 0.7;
+      // Twinkling background star
+      const op = Math.abs(Math.sin(dot.twinkleO)) * dot.brightness;
       ctx.beginPath();
       ctx.arc(dot.x, dot.y, 1.2, 0, 7);
-      ctx.fillStyle = `rgba(255, 255, 255, ${op})`;
+      ctx.fillStyle = `rgba(240, 245, 255, ${op})`;
       ctx.fill();
     }
   });
   
-  // 3. Draw constellation lines
+  // Constellation lines (soft silver-white light)
   constellationConnections.forEach(line => {
     if (line.progress > 0) {
       const dx = line.to.x - line.from.x;
@@ -283,15 +290,27 @@ function draw() {
       const currentX = line.from.x + dx * line.progress;
       const currentY = line.from.y + dy * line.progress;
       
+      // Main line (soft silver-white)
       ctx.beginPath();
       ctx.moveTo(line.from.x, line.from.y);
       ctx.lineTo(currentX, currentY);
-      ctx.strokeStyle = 'rgba(255, 209, 102, 0.8)';
-      ctx.lineWidth = 1.2;
-      ctx.shadowBlur = 10;
-      ctx.shadowColor = '#ffd166';
+      ctx.strokeStyle = 'rgba(220, 230, 255, 0.6)';
+      ctx.lineWidth = 0.8;
+      ctx.shadowBlur = 6;
+      ctx.shadowColor = 'rgba(200, 220, 255, 0.5)';
       ctx.stroke();
       ctx.shadowBlur = 0;
+      
+      // Traveling light "spark" at the tip (realistic effect)
+      if (line.progress < 1) {
+        const sparkGradient = ctx.createRadialGradient(currentX, currentY, 0, currentX, currentY, 4);
+        sparkGradient.addColorStop(0, 'rgba(255, 255, 255, 0.9)');
+        sparkGradient.addColorStop(1, 'rgba(200, 220, 255, 0)');
+        ctx.fillStyle = sparkGradient;
+        ctx.beginPath();
+        ctx.arc(currentX, currentY, 4, 0, 7);
+        ctx.fill();
+      }
     }
   });
   
@@ -299,13 +318,20 @@ function draw() {
 }
 draw();
 
-// ============ REVEAL SEQUENCE ============
-function revealDots(dots, duration = 800, callback) {
+// ============ ANIMATION HELPERS ============
+
+// Easing function for smooth cinematic feel
+function easeInOutCubic(t) {
+  return t < 0.5 ? 4 * t * t * t : 1 - Math.pow(-2 * t + 2, 3) / 2;
+}
+
+function revealDots(dots, duration = 1200, callback) {
   const startTime = performance.now();
   function frame(now) {
     const elapsed = now - startTime;
     const progress = Math.min(elapsed / duration, 1);
-    const targetIdx = Math.floor(progress * dots.length);
+    const easedProgress = easeInOutCubic(progress);
+    const targetIdx = Math.floor(easedProgress * dots.length);
     for (let i = 0; i < targetIdx; i++) dots[i].isRevealed = true;
     if (progress < 1) requestAnimationFrame(frame);
     else {
@@ -316,25 +342,39 @@ function revealDots(dots, duration = 800, callback) {
   requestAnimationFrame(frame);
 }
 
-function drawLines(lines, duration = 2000, callback) {
-  const startTime = performance.now();
-  function frame(now) {
-    const elapsed = now - startTime;
-    const overall = Math.min(elapsed / duration, 1);
+// Draw lines one at a time (sequential, realistic)
+function drawLinesSequential(lines, timePerLine = 600, callback) {
+  let currentLineIdx = 0;
+  
+  function drawNextLine() {
+    if (currentLineIdx >= lines.length) {
+      if (callback) callback();
+      return;
+    }
     
-    lines.forEach((line, i) => {
-      const lineStart = (i / lines.length) * 0.7;
-      const lineEnd = lineStart + 0.3;
-      const lineProgress = Math.max(0, Math.min(1, (overall - lineStart) / (lineEnd - lineStart)));
-      line.progress = lineProgress;
-    });
+    const line = lines[currentLineIdx];
+    const startTime = performance.now();
     
-    if (overall < 1) requestAnimationFrame(frame);
-    else if (callback) callback();
+    function animateLine(now) {
+      const elapsed = now - startTime;
+      const progress = Math.min(elapsed / timePerLine, 1);
+      line.progress = easeInOutCubic(progress);
+      
+      if (progress < 1) {
+        requestAnimationFrame(animateLine);
+      } else {
+        line.progress = 1;
+        currentLineIdx++;
+        setTimeout(drawNextLine, 80); // Small pause between lines for realism
+      }
+    }
+    requestAnimationFrame(animateLine);
   }
-  requestAnimationFrame(frame);
+  
+  drawNextLine();
 }
 
+// ============ MAIN REVEAL SEQUENCE ============
 function revealConstellation() {
   // Reset
   constellationDots.forEach(d => d.isRevealed = false);
@@ -348,31 +388,31 @@ function revealConstellation() {
   const gojoLines = constellationConnections.filter(c => c.group === 'gojo');
   const heartLines = constellationConnections.filter(c => c.group === 'heart');
   
-  // Step 1: Reveal KALU stars
-  revealDots(kaluDots, 800, () => {
-    // Step 2: Draw KALU lines
-    drawLines(kaluLines, 1500, () => {
-      // Step 3: Reveal GOJO stars
-      setTimeout(() => {
-        revealDots(gojoDots, 800, () => {
-          // Step 4: Draw GOJO lines
-          drawLines(gojoLines, 1500, () => {
-            // Step 5: Reveal heart stars
+  // Sequence: Reveal → Draw → Reveal → Draw → Reveal → Draw → Text
+  revealDots(kaluDots, 1500, () => {
+    setTimeout(() => {
+      drawLinesSequential(kaluLines, 500, () => {
+        setTimeout(() => {
+          revealDots(gojoDots, 1500, () => {
             setTimeout(() => {
-              revealDots(heartDots, 1000, () => {
-                // Step 6: Draw heart lines
-                drawLines(heartLines, 2000, () => {
-                  // Step 7: Show final text
-                  setTimeout(() => {
-                    document.getElementById('finalText').classList.add('show');
-                  }, 400);
-                });
+              drawLinesSequential(gojoLines, 500, () => {
+                setTimeout(() => {
+                  revealDots(heartDots, 1800, () => {
+                    setTimeout(() => {
+                      drawLinesSequential(heartLines, 400, () => {
+                        setTimeout(() => {
+                          document.getElementById('finalText').classList.add('show');
+                        }, 600);
+                      });
+                    }, 500);
+                  });
+                }, 600);
               });
             }, 400);
           });
-        });
-      }, 400);
-    });
+        }, 600);
+      });
+    }, 400);
   });
 }
 </script>
