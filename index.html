@@ -2586,18 +2586,38 @@
     if (matchMedia('(pointer:fine)').matches) {
       document.body.classList.add('custom-cursor-active');
       const cursorEl = document.getElementById('customCursor');
-      let cursorX = 0, cursorY = 0, cursorTicking = false;
-      window.addEventListener('mousemove', e => {
-        cursorX = e.clientX;
-        cursorY = e.clientY;
-        if (!cursorTicking) {
-          requestAnimationFrame(() => {
-            cursorEl.style.transform = `translate3d(${cursorX}px, ${cursorY}px, 0) translate(-50%, -50%)`;
-            cursorTicking = false;
-          });
-          cursorTicking = true;
-        }
-      }, { passive: true });
+      if (matchMedia('(pointer:fine)').matches) {
+        let lastTrail = 0;
+        const heartPool = []; // Reuse elements instead of creating new
+
+        window.addEventListener('mousemove', (e) => {
+          if (Date.now() - lastTrail < 120) return;
+          lastTrail = Date.now();
+
+          let h;
+          if (heartPool.length > 0) {
+            h = heartPool.pop();
+          } else {
+            h = document.createElement('span');
+            h.className = 'cursor-heart';
+            h.textContent = '💗';
+            document.body.appendChild(h);
+          }
+
+          // Use left/top instead of transform to avoid conflicts
+          h.style.left = e.clientX + 'px';
+          h.style.top = e.clientY + 'px';
+          h.style.opacity = '1';
+          h.style.animation = 'none';
+          void h.offsetWidth;
+          h.style.animation = 'cursorFadeTrail 1s forwards';
+
+          setTimeout(() => {
+            h.style.opacity = '0';
+            if (heartPool.length < 20) heartPool.push(h);
+          }, 1000);
+        }, { passive: true });
+      }
       window.addEventListener('mousedown', () => cursorEl.style.transform = 'translate(-50%,-50%) scale(.7)');
       window.addEventListener('mouseup', () => cursorEl.style.transform = 'translate(-50%,-50%) scale(1)');
     } else {
