@@ -2748,8 +2748,17 @@
 
     /* ---------- Starfield ---------- */
     const canvas = document.getElementById('stars'), ctx = canvas.getContext('2d');
-    function resize() { canvas.width = innerWidth; canvas.height = innerHeight; }
-    resize(); window.addEventListener('resize', resize);
+    function resize() {
+      canvas.width = innerWidth;
+      canvas.height = innerHeight;
+    }
+    resize();
+
+    let resizeTimeout;
+    window.addEventListener('resize', () => {
+      clearTimeout(resizeTimeout);
+      resizeTimeout = setTimeout(resize, 150);
+    }, { passive: true });
     let stars = Array.from({ length: 100 }, () => ({ // Reduced from 150
       x: Math.random() * canvas.width,
       y: Math.random() * canvas.height,
