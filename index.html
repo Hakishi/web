@@ -2736,8 +2736,30 @@
       floatField.appendChild(el);
       setTimeout(() => el.remove(), duration * 1000 + 500);
     }
-    for (let i = 0; i < 6; i++) setTimeout(spawnFloatingPhoto, i * 400);
-    setInterval(spawnFloatingPhoto, 1000);
+    // Only start floating photos when hero is visible
+    let heroVisible = true;
+    let floatingInterval = null;
+
+    function startFloating() {
+      if (floatingInterval) return;
+      for (let i = 0; i < 4; i++) setTimeout(spawnFloatingPhoto, i * 500); // Was 6, now 4
+      floatingInterval = setInterval(spawnFloatingPhoto, 1500); // Was 1000ms, now 1500ms
+    }
+
+    function stopFloating() {
+      if (floatingInterval) {
+        clearInterval(floatingInterval);
+        floatingInterval = null;
+      }
+    }
+
+    // Watch hero visibility
+    new IntersectionObserver((entries) => {
+      entries.forEach(entry => {
+        if (entry.isIntersecting) startFloating();
+        else stopFloating();
+      });
+    }).observe(document.getElementById('hero'));
 
     /* ---------- Reveal on scroll ---------- */
     const revealEls = document.querySelectorAll('.reveal, .chat-bubble, .day-box, .paw, .month-fade span');
