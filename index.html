@@ -2586,10 +2586,18 @@
     if (matchMedia('(pointer:fine)').matches) {
       document.body.classList.add('custom-cursor-active');
       const cursorEl = document.getElementById('customCursor');
+      let cursorX = 0, cursorY = 0, cursorTicking = false;
       window.addEventListener('mousemove', e => {
-        cursorEl.style.left = e.clientX + 'px';
-        cursorEl.style.top = e.clientY + 'px';
-      });
+        cursorX = e.clientX;
+        cursorY = e.clientY;
+        if (!cursorTicking) {
+          requestAnimationFrame(() => {
+            cursorEl.style.transform = `translate3d(${cursorX}px, ${cursorY}px, 0) translate(-50%, -50%)`;
+            cursorTicking = false;
+          });
+          cursorTicking = true;
+        }
+      }, { passive: true });
       window.addEventListener('mousedown', () => cursorEl.style.transform = 'translate(-50%,-50%) scale(.7)');
       window.addEventListener('mouseup', () => cursorEl.style.transform = 'translate(-50%,-50%) scale(1)');
     } else {
