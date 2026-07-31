@@ -2747,11 +2747,18 @@
     revealEls.forEach(el => io.observe(el));
 
     /* ---------- Scroll progress bar ---------- */
+    let scrollTicking = false;
     window.addEventListener('scroll', () => {
-      const h = document.documentElement;
-      const scrolled = (h.scrollTop) / (h.scrollHeight - h.clientHeight) * 100;
-      document.getElementById('scrollProgress').style.width = scrolled + '%';
-    });
+      if (!scrollTicking) {
+        requestAnimationFrame(() => {
+          const h = document.documentElement;
+          const scrolled = (h.scrollTop) / (h.scrollHeight - h.clientHeight) * 100;
+          document.getElementById('scrollProgress').style.width = scrolled + '%';
+          scrollTicking = false;
+        });
+        scrollTicking = true;
+      }
+    }, { passive: true });
 
     /* ================= HYBRID SECTION SCROLL (natural within-section + snap at edges) ================= */
     const allSections = Array.from(document.querySelectorAll('.section'));
