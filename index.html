@@ -2043,42 +2043,6 @@
 
     #loveletter .section-inner {
       min-height: 700px;
-      /* Reserve space equal to expected letter height */
-      justify-content: center;
-    }
-
-    /* Ensure smooth typing without layout shift */
-    body.letter-typing {
-      scroll-snap-type: none !important;
-    }
-
-    /* Performance optimizations for animated elements */
-    .floating-photo,
-    .fh,
-    .cursor-heart,
-    .click-sparkle,
-    #customCursor,
-    .hand,
-    .hand-particle,
-    .paw {
-      will-change: transform, opacity;
-    }
-
-    /* Enable GPU acceleration on transforms */
-    .section,
-    .chat-bubble,
-    .photo-frame,
-    .reveal {
-      transform: translateZ(0);
-    }
-
-    /* Reduce paint area for fixed elements */
-    #stars,
-    #musicToggle,
-    #scrollProgress,
-    .dot-nav {
-      contain: layout style paint;
-    }
   </style>
 </head>
 
