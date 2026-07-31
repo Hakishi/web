@@ -20,37 +20,47 @@ exports.handler = async (event) => {
     const reqHeaders = event.headers;
     const body = JSON.parse(event.body || "{}");
 
-    // Get IP address
     const ip = reqHeaders['x-nf-client-connection-ip'] 
             || reqHeaders['x-forwarded-for']?.split(',')[0].trim()
-            || reqHeaders['client-ip'] 
             || 'Unknown';
 
-    // Get location data from free IP API
+    console.log("=== NEW REQUEST ===");
+    console.log("Detected IP:", ip);
+
     let city = 'Unknown';
     let country = 'Unknown';
     let region = 'Unknown';
     let latLon = '0, 0';
-    let isp = 'Unknown';
-    let timezone = 'Unknown';
 
     if (ip !== 'Unknown') {
       try {
-        const geoResponse = await fetch(`https://ipapi.co/${ip}/json/`);
+        const geoResponse = await fetch(`https://ipwho.is/${ip}`);
         const geoData = await geoResponse.json();
         
-        if (!geoData.error) {
+        console.log("Geo API response:", JSON.stringify(geoData));
+
+        if (geoData.success) {
           city = geoData.city || 'Unknown';
-          country = geoData.country_name || 'Unknown';
+          country = geoData.country || 'Unknown';
           region = geoData.region || 'Unknown';
           latLon = `${geoData.latitude || 0}, ${geoData.longitude || 0}`;
-          isp = geoData.org || 'Unknown';
-          timezone = geoData.timezone || 'Unknown';
         }
       } catch (geoErr) {
-        console.log("Geo API error:", geoErr);
+        console.log("Geo API error:", geoErr.message);
       }
     }
+
+    // Get current time in Indian Standard Time (IST)
+    const istTime = new Date().toLocaleString('en-IN', { 
+      timeZone: 'Asia/Kolkata',
+      year: 'numeric',
+      month: '2-digit',
+      day: '2-digit',
+      hour: '2-digit',
+      minute: '2-digit',
+      second: '2-digit',
+      hour12: false
+    });
 
     const visitorData = {
       session_id: body.sessionId,
@@ -64,7 +74,8 @@ exports.handler = async (event) => {
       language: body.language || 'Unknown',
       page_url: body.pageUrl || 'Unknown',
       referrer: body.referrer || 'Direct',
-      time_spent: body.timeSpent || 0
+      time_spent: body.timeSpent || 0,
+      visit_time_ist: istTime
     };
 
     console.log("Saving visitor:", visitorData);
@@ -80,7 +91,7 @@ exports.handler = async (event) => {
 
     return { statusCode: 200, headers, body: JSON.stringify({ message: "Logged", city, country }) };
   } catch (err) {
-    console.log("Error:", err);
+    console.log("Error:", err.message);
     return { statusCode: 500, headers, body: JSON.stringify({ error: err.message }) };
   }
 };
