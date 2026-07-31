@@ -1408,10 +1408,17 @@
     }
 
     .card-overlay {
-      background: rgba(10, 5, 20, 0.97) !important;
-      /* Removed backdrop-filter completely */
-      will-change: opacity;
-      contain: layout style paint;
+      position: fixed;
+      inset: 0;
+      background: rgba(10, 5, 20, .85);
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      z-index: 2000;
+      opacity: 0;
+      pointer-events: none;
+      transform: scale(.9);
+      transition: opacity .5s ease, transform .5s ease;
     }
 
     .card-overlay.show {
