@@ -83,10 +83,36 @@ const letters = {
 let bgStars = [];
 let constellationDots = [];
 let constellationConnections = [];
+let sparkParticles = []; // For traveling spark trails
 
-// Add slight random imperfection (like real stars)
-function jitter(amount = 4) {
+// Truly random jitter (different every reload)
+function jitter(amount) {
   return (Math.random() - 0.5) * amount;
+}
+
+// Natural star size distribution: most stars small, few large (like real sky)
+function naturalStarSize() {
+  const r = Math.random();
+  if (r < 0.6) return 1.2 + Math.random() * 0.8; // 60% small stars (1.2-2.0)
+  if (r < 0.9) return 2.0 + Math.random() * 1.0; // 30% medium (2.0-3.0)
+  return 3.0 + Math.random() * 1.5;              // 10% bright large (3.0-4.5)
+}
+
+// Natural glow size based on star size
+function glowSizeFor(coreSize) {
+  return coreSize * 5 + Math.random() * 3;
+}
+
+// Slight color variation (real stars have subtle color tints)
+function starColorTint() {
+  const tints = [
+    'rgba(255, 250, 240',  // Warm white
+    'rgba(240, 245, 255',  // Cool blue-white
+    'rgba(255, 245, 235',  // Soft yellow-white
+    'rgba(245, 250, 255',  // Pure white
+    'rgba(255, 240, 230'   // Slight orange
+  ];
+  return tints[Math.floor(Math.random() * tints.length)];
 }
 
 function layoutStars() {
@@ -95,7 +121,6 @@ function layoutStars() {
   const centerX = w / 2;
   const centerY = h / 2;
   
-  // BIGGER letters (was 0.08, now 0.11)
   const letterHeight = Math.min(w * 0.11, h * 0.14, 110);
   const letterWidth = letterHeight * 0.7;
   const spacing = letterWidth * 0.55;
@@ -103,10 +128,13 @@ function layoutStars() {
   constellationDots = [];
   constellationConnections = [];
   
+  // Random jitter amounts (varies each visit!)
+  const jitterFactor = 0.08 + Math.random() * 0.08; // 8-16% variation each reload
+  
   // KALU
   const kaluWidth = 4 * letterWidth + 3 * spacing;
   const kaluStartX = centerX - kaluWidth / 2;
-  const kaluY = centerY - letterHeight - 50; // More gap
+  const kaluY = centerY - letterHeight - 60;
   const kaluLetters = ['K', 'A', 'L', 'U'];
   
   let kaluDotIndex = 0;
@@ -116,17 +144,20 @@ function layoutStars() {
     const startIdx = kaluDotIndex;
     
     def.dots.forEach(([dx, dy]) => {
+      const coreSize = naturalStarSize();
       constellationDots.push({
-        // Add slight jitter for natural, imperfect look
-        x: offsetX + dx * letterWidth + jitter(letterWidth * 0.08),
-        y: kaluY + dy * letterHeight + jitter(letterHeight * 0.08),
+        x: offsetX + dx * letterWidth + jitter(letterWidth * jitterFactor),
+        y: kaluY + dy * letterHeight + jitter(letterHeight * jitterFactor),
         group: 'kalu',
         isRevealed: false,
-        revealProgress: 0, // 0 to 1 for smooth glow-in
+        revealProgress: 0,
         twinkleO: Math.random() * 10,
         twinkleS: Math.random() * 0.02 + 0.005,
-        brightness: 0.7 + Math.random() * 0.3,
-        size: 1.5 + Math.random() * 1.2 // Varied star sizes
+        brightness: 0.65 + Math.random() * 0.35,
+        size: coreSize,
+        glowRadius: glowSizeFor(coreSize),
+        color: starColorTint(),
+        hasRays: coreSize > 2.5 // Only bright stars have rays
       });
       kaluDotIndex++;
     });
@@ -146,7 +177,7 @@ function layoutStars() {
   // GOJO
   const gojoWidth = 4 * letterWidth + 3 * spacing;
   const gojoStartX = centerX - gojoWidth / 2;
-  const gojoY = centerY + 50; // More gap
+  const gojoY = centerY + 60;
   const gojoLetters = ['G', 'O', 'J', 'O'];
   
   let gojoDotIndex = constellationDots.length;
@@ -156,16 +187,20 @@ function layoutStars() {
     const startIdx = gojoDotIndex;
     
     def.dots.forEach(([dx, dy]) => {
+      const coreSize = naturalStarSize();
       constellationDots.push({
-        x: offsetX + dx * letterWidth + jitter(letterWidth * 0.08),
-        y: gojoY + dy * letterHeight + jitter(letterHeight * 0.08),
+        x: offsetX + dx * letterWidth + jitter(letterWidth * jitterFactor),
+        y: gojoY + dy * letterHeight + jitter(letterHeight * jitterFactor),
         group: 'gojo',
         isRevealed: false,
         revealProgress: 0,
         twinkleO: Math.random() * 10,
         twinkleS: Math.random() * 0.02 + 0.005,
-        brightness: 0.7 + Math.random() * 0.3,
-        size: 1.5 + Math.random() * 1.2
+        brightness: 0.65 + Math.random() * 0.35,
+        size: coreSize,
+        glowRadius: glowSizeFor(coreSize),
+        color: starColorTint(),
+        hasRays: coreSize > 2.5
       });
       gojoDotIndex++;
     });
@@ -182,17 +217,16 @@ function layoutStars() {
     });
   });
   
-  // HEART — MUCH BIGGER to properly contain both names
+  // HEART — EVEN BIGGER
   const maxNameWidth = Math.max(kaluWidth, gojoWidth);
-  const totalNameHeight = (letterHeight * 2) + 100; // KALU + gap + GOJO
+  const totalNameHeight = (letterHeight * 2) + 120;
   
-  // Heart size: significantly larger to fully wrap around
-  const heartWidth = maxNameWidth * 2.2; // 120% padding total
-  const heartHeight = totalNameHeight * 1.9; // 90% padding total
+  const heartWidth = maxNameWidth * 2.8; // Was 2.2, now 2.8
+  const heartHeight = totalNameHeight * 2.3; // Was 1.9, now 2.3
   
   const heartCenterX = centerX;
   const heartCenterY = centerY;
-  const numHeartPoints = 22; // Slightly more for a smoother heart
+  const numHeartPoints = 24;
   const heartStartIdx = constellationDots.length;
   
   const scaleX = heartWidth / 32;
@@ -202,16 +236,20 @@ function layoutStars() {
     const t = (i / numHeartPoints) * Math.PI * 2;
     const hx = 16 * Math.pow(Math.sin(t), 3);
     const hy = -(13 * Math.cos(t) - 5 * Math.cos(2*t) - 2 * Math.cos(3*t) - Math.cos(4*t));
+    const coreSize = naturalStarSize();
     constellationDots.push({
-      x: heartCenterX + hx * scaleX + jitter(6), // Slight imperfection
-      y: heartCenterY + hy * scaleY + jitter(6),
+      x: heartCenterX + hx * scaleX + jitter(10),
+      y: heartCenterY + hy * scaleY + jitter(10),
       group: 'heart',
       isRevealed: false,
       revealProgress: 0,
       twinkleO: Math.random() * 10,
       twinkleS: Math.random() * 0.02 + 0.005,
-      brightness: 0.7 + Math.random() * 0.3,
-      size: 1.5 + Math.random() * 1.2
+      brightness: 0.65 + Math.random() * 0.35,
+      size: coreSize,
+      glowRadius: glowSizeFor(coreSize),
+      color: starColorTint(),
+      hasRays: coreSize > 2.5
     });
   }
   
@@ -226,10 +264,10 @@ function layoutStars() {
     });
   }
   
-  // Background stars — reduced density where constellation is
+  // Background stars
   bgStars = [];
   const numBgStars = 100;
-  const minDist = 45; // More clearance
+  const minDist = 50;
   
   let attempts = 0;
   while (bgStars.length < numBgStars && attempts < numBgStars * 5) {
@@ -240,12 +278,14 @@ function layoutStars() {
     const tooClose = constellationDots.some(d => Math.hypot(d.x - x, d.y - y) < minDist);
     if (tooClose) continue;
     
+    const coreSize = naturalStarSize() * 0.7; // Slightly smaller for BG
     bgStars.push({
       x, y,
-      r: Math.random() * 1.2 + 0.3,
+      r: coreSize,
       o: Math.random() * 10,
       s: Math.random() * 0.02 + 0.005,
-      brightness: 0.6 + Math.random() * 0.4
+      brightness: 0.5 + Math.random() * 0.5,
+      color: starColorTint()
     });
   }
 }
@@ -257,13 +297,22 @@ window.addEventListener('resize', resizeCanvas);
 function draw() {
   ctx.clearRect(0, 0, canvas.width, canvas.height);
   
-  // Background stars (silver-white)
+  // Background stars (natural varied color)
   bgStars.forEach(st => {
     st.o += st.s;
     const op = Math.abs(Math.sin(st.o)) * st.brightness;
+    
+    // Small glow for bigger BG stars
+    if (st.r > 1.5) {
+      ctx.beginPath();
+      ctx.arc(st.x, st.y, st.r * 3, 0, 7);
+      ctx.fillStyle = `${st.color}, ${op * 0.2})`;
+      ctx.fill();
+    }
+    
     ctx.beginPath();
     ctx.arc(st.x, st.y, st.r, 0, 7);
-    ctx.fillStyle = `rgba(240, 245, 255, ${op})`;
+    ctx.fillStyle = `${st.color}, ${op})`;
     ctx.fill();
   });
   
@@ -272,36 +321,38 @@ function draw() {
     dot.twinkleO += dot.twinkleS;
     
     if (dot.isRevealed) {
-      // Smoothly grow reveal
-      if (dot.revealProgress < 1) dot.revealProgress = Math.min(dot.revealProgress + 0.04, 1);
+      if (dot.revealProgress < 1) dot.revealProgress = Math.min(dot.revealProgress + 0.05, 1);
       
-      // Larger, more dramatic star (bigger than before)
-      const glowSize = 18 * dot.revealProgress; // Was 10, now 18
+      const glowSize = dot.glowRadius * dot.revealProgress;
+      
+      // Soft outer glow
       const glowGradient = ctx.createRadialGradient(dot.x, dot.y, 0, dot.x, dot.y, glowSize);
-      glowGradient.addColorStop(0, `rgba(230, 240, 255, ${0.7 * dot.revealProgress})`);
-      glowGradient.addColorStop(0.3, `rgba(200, 220, 255, ${0.35 * dot.revealProgress})`);
-      glowGradient.addColorStop(1, 'rgba(180, 200, 255, 0)');
+      glowGradient.addColorStop(0, `${dot.color}, ${0.55 * dot.revealProgress})`);
+      glowGradient.addColorStop(0.4, `${dot.color}, ${0.25 * dot.revealProgress})`);
+      glowGradient.addColorStop(1, `${dot.color}, 0)`);
       ctx.fillStyle = glowGradient;
       ctx.beginPath();
       ctx.arc(dot.x, dot.y, glowSize, 0, 7);
       ctx.fill();
       
-      // Bright core with subtle twinkle
-      const twinkle = 0.85 + Math.sin(dot.twinkleO * 3) * 0.15;
+      // Natural twinkle on core
+      const twinkle = 0.88 + Math.sin(dot.twinkleO * 2.5) * 0.12;
+      
+      // Bright core (natural color)
       ctx.beginPath();
       ctx.arc(dot.x, dot.y, dot.size * dot.revealProgress, 0, 7);
-      ctx.fillStyle = `rgba(255, 255, 255, ${twinkle * dot.revealProgress})`;
-      ctx.shadowBlur = 12;
-      ctx.shadowColor = 'rgba(220, 230, 255, 0.9)';
+      ctx.fillStyle = `${dot.color}, ${twinkle * dot.revealProgress})`;
+      ctx.shadowBlur = 10;
+      ctx.shadowColor = `${dot.color}, 0.7)`;
       ctx.fill();
       ctx.shadowBlur = 0;
       
-      // Cross-shaped light rays (like real bright stars in photos)
-      if (dot.revealProgress > 0.5) {
-        const rayLength = 8 * dot.revealProgress;
-        const rayOpacity = 0.4 * dot.revealProgress;
-        ctx.strokeStyle = `rgba(220, 230, 255, ${rayOpacity})`;
-        ctx.lineWidth = 0.5;
+      // Cross rays ONLY on bright stars (natural, like camera lens flare on real stars)
+      if (dot.hasRays && dot.revealProgress > 0.6) {
+        const rayLength = dot.size * 4 * dot.revealProgress;
+        const rayOpacity = 0.35 * dot.revealProgress * twinkle;
+        ctx.strokeStyle = `${dot.color}, ${rayOpacity})`;
+        ctx.lineWidth = 0.6;
         ctx.beginPath();
         ctx.moveTo(dot.x - rayLength, dot.y);
         ctx.lineTo(dot.x + rayLength, dot.y);
@@ -310,11 +361,11 @@ function draw() {
         ctx.stroke();
       }
     } else {
-      // Hidden: looks like a normal background star (twinkling)
-      const op = Math.abs(Math.sin(dot.twinkleO)) * dot.brightness * 0.9;
+      // Hidden: small twinkling star (varies naturally)
+      const op = Math.abs(Math.sin(dot.twinkleO)) * dot.brightness * 0.85;
       ctx.beginPath();
-      ctx.arc(dot.x, dot.y, 1.1, 0, 7);
-      ctx.fillStyle = `rgba(240, 245, 255, ${op})`;
+      ctx.arc(dot.x, dot.y, dot.size * 0.5, 0, 7);
+      ctx.fillStyle = `${dot.color}, ${op})`;
       ctx.fill();
     }
   });
@@ -327,34 +378,61 @@ function draw() {
       const currentX = line.from.x + dx * line.progress;
       const currentY = line.from.y + dy * line.progress;
       
-      // Main line (soft silver-white)
+      // Main line
       ctx.beginPath();
       ctx.moveTo(line.from.x, line.from.y);
       ctx.lineTo(currentX, currentY);
-      ctx.strokeStyle = 'rgba(220, 230, 255, 0.6)';
+      ctx.strokeStyle = 'rgba(220, 230, 255, 0.55)';
       ctx.lineWidth = 0.9;
-      ctx.shadowBlur = 7;
-      ctx.shadowColor = 'rgba(200, 220, 255, 0.5)';
+      ctx.shadowBlur = 5;
+      ctx.shadowColor = 'rgba(200, 220, 255, 0.4)';
       ctx.stroke();
       ctx.shadowBlur = 0;
-      
-      // Traveling light spark
-      if (line.progress < 1) {
-        const sparkGradient = ctx.createRadialGradient(currentX, currentY, 0, currentX, currentY, 6);
-        sparkGradient.addColorStop(0, 'rgba(255, 255, 255, 1)');
-        sparkGradient.addColorStop(0.4, 'rgba(220, 230, 255, 0.6)');
-        sparkGradient.addColorStop(1, 'rgba(200, 220, 255, 0)');
-        ctx.fillStyle = sparkGradient;
-        ctx.beginPath();
-        ctx.arc(currentX, currentY, 6, 0, 7);
-        ctx.fill();
-      }
     }
   });
+  
+  // Draw & update spark particles (traveling light head)
+  for (let i = sparkParticles.length - 1; i >= 0; i--) {
+    const p = sparkParticles[i];
+    p.life -= 0.03;
+    p.x += p.vx;
+    p.y += p.vy;
+    p.vy += 0.02; // Slight gravity for natural drift
+    
+    if (p.life <= 0) {
+      sparkParticles.splice(i, 1);
+      continue;
+    }
+    
+    // Draw spark particle with sparkle glow
+    const size = p.size * p.life;
+    const sparkGradient = ctx.createRadialGradient(p.x, p.y, 0, p.x, p.y, size * 3);
+    sparkGradient.addColorStop(0, `rgba(255, 255, 255, ${p.life})`);
+    sparkGradient.addColorStop(0.4, `rgba(220, 230, 255, ${p.life * 0.5})`);
+    sparkGradient.addColorStop(1, 'rgba(200, 220, 255, 0)');
+    ctx.fillStyle = sparkGradient;
+    ctx.beginPath();
+    ctx.arc(p.x, p.y, size * 3, 0, 7);
+    ctx.fill();
+  }
   
   requestAnimationFrame(draw);
 }
 draw();
+
+// Emit sparkles at the traveling line head
+function emitSparkles(x, y, count = 2) {
+  for (let i = 0; i < count; i++) {
+    sparkParticles.push({
+      x: x + jitter(3),
+      y: y + jitter(3),
+      vx: jitter(0.6),
+      vy: jitter(0.6),
+      size: 0.8 + Math.random() * 1.2,
+      life: 0.7 + Math.random() * 0.3
+    });
+  }
+}
 
 // ============ ANIMATION HELPERS ============
 
@@ -362,24 +440,38 @@ function easeInOutCubic(t) {
   return t < 0.5 ? 4 * t * t * t : 1 - Math.pow(-2 * t + 2, 3) / 2;
 }
 
-// Draw one line and light stars as spark arrives
 function drawSingleLine(line, duration = 700, callback) {
-  // Light the FROM star as the line begins
   if (!line.fromLit) {
     line.from.isRevealed = true;
     line.fromLit = true;
   }
   
   const startTime = performance.now();
+  let lastSparkTime = 0;
+  
   function frame(now) {
     const elapsed = now - startTime;
     const progress = Math.min(elapsed / duration, 1);
     line.progress = easeInOutCubic(progress);
     
-    // Light TO star when spark arrives (around 90% progress)
+    // Calculate current head position for sparkle emission
+    const dx = line.to.x - line.from.x;
+    const dy = line.to.y - line.from.y;
+    const currentX = line.from.x + dx * line.progress;
+    const currentY = line.from.y + dy * line.progress;
+    
+    // Emit sparkles at the traveling head (every 30ms)
+    if (now - lastSparkTime > 30 && line.progress < 1) {
+      emitSparkles(currentX, currentY, 3);
+      lastSparkTime = now;
+    }
+    
+    // Light TO star when spark arrives
     if (line.progress > 0.9 && !line.toLit) {
       line.to.isRevealed = true;
       line.toLit = true;
+      // Burst of sparkles when reaching a star
+      emitSparkles(line.to.x, line.to.y, 8);
     }
     
     if (progress < 1) {
@@ -394,7 +486,6 @@ function drawSingleLine(line, duration = 700, callback) {
   requestAnimationFrame(frame);
 }
 
-// Draw lines sequentially with the "lighting stars as spark arrives" effect
 function drawLinesSequential(lines, timePerLine = 700, gapBetween = 100, callback) {
   let currentIdx = 0;
   
@@ -418,13 +509,13 @@ function revealConstellation() {
   // Reset
   constellationDots.forEach(d => { d.isRevealed = false; d.revealProgress = 0; });
   constellationConnections.forEach(c => { c.progress = 0; c.fromLit = false; c.toLit = false; });
+  sparkParticles = [];
   document.getElementById('finalText').classList.remove('show');
   
   const kaluLines = constellationConnections.filter(c => c.group === 'kalu');
   const gojoLines = constellationConnections.filter(c => c.group === 'gojo');
   const heartLines = constellationConnections.filter(c => c.group === 'heart');
   
-  // Sequence: Draw KALU (stars light as spark arrives) → Draw GOJO → Draw Heart → Text
   drawLinesSequential(kaluLines, 700, 120, () => {
     setTimeout(() => {
       drawLinesSequential(gojoLines, 700, 120, () => {
