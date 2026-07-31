@@ -2350,42 +2350,65 @@
 
   <script src="https://cdn.jsdelivr.net/npm/canvas-confetti@1.9.2/dist/confetti.browser.min.js"></script>
   <script>
-    /* ============ FULLSCREEN TOGGLE ============ */
+    /* ============ FULLSCREEN TOGGLE (Auto-enter on load) ============ */
     (function () {
       const btn = document.getElementById('fullscreenBtn');
       if (!btn) return;
 
+      function requestFullscreen() {
+        const el = document.documentElement;
+        if (el.requestFullscreen) return el.requestFullscreen();
+        else if (el.webkitRequestFullscreen) return el.webkitRequestFullscreen();
+        else if (el.msRequestFullscreen) return el.msRequestFullscreen();
+      }
+
+      function exitFullscreen() {
+        if (document.exitFullscreen) document.exitFullscreen();
+        else if (document.webkitExitFullscreen) document.webkitExitFullscreen();
+        else if (document.msExitFullscreen) document.msExitFullscreen();
+      }
+
       function toggleFullscreen() {
         if (!document.fullscreenElement && !document.webkitFullscreenElement) {
-          const el = document.documentElement;
-          if (el.requestFullscreen) el.requestFullscreen();
-          else if (el.webkitRequestFullscreen) el.webkitRequestFullscreen();
-          else if (el.msRequestFullscreen) el.msRequestFullscreen();
+          requestFullscreen();
         } else {
-          if (document.exitFullscreen) document.exitFullscreen();
-          else if (document.webkitExitFullscreen) document.webkitExitFullscreen();
-          else if (document.msExitFullscreen) document.msExitFullscreen();
+          exitFullscreen();
         }
       }
 
       btn.addEventListener('click', toggleFullscreen);
 
-      // Update button state
       function updateBtnState() {
         const isFullscreen = !!(document.fullscreenElement || document.webkitFullscreenElement);
         if (isFullscreen) {
           btn.classList.add('active');
-          btn.textContent = '⛶';
           btn.title = 'Exit Fullscreen';
         } else {
           btn.classList.remove('active');
-          btn.textContent = '⛶';
           btn.title = 'Enter Fullscreen';
         }
       }
 
       document.addEventListener('fullscreenchange', updateBtnState);
       document.addEventListener('webkitfullscreenchange', updateBtnState);
+
+      // AUTO-ENTER fullscreen on first user interaction (browser policy requires this)
+      let autoTriggered = false;
+      function autoEnterFullscreen() {
+        if (autoTriggered) return;
+        autoTriggered = true;
+        requestFullscreen().catch(() => {
+          // Browser blocked, user will need to click button manually
+          // Show a subtle pulse animation on the button
+          btn.style.animation = 'pulseBtn 2s infinite';
+          setTimeout(() => { btn.style.animation = ''; }, 6000);
+        });
+      }
+
+      // Try on any first interaction
+      ['click', 'keydown', 'touchstart'].forEach(evt => {
+        document.addEventListener(evt, autoEnterFullscreen, { once: true, capture: true });
+      });
     })();
     /* ---------- Preloader ---------- */
     window.addEventListener('load', () => {
@@ -3001,10 +3024,8 @@ Happy Girlfriend Day, mentosss. I love you — ass tujhi and all. 😄❤️`;
         constCanvas.width = innerWidth;
         constCanvas.height = innerHeight;
 
-        // Don't lock body - user should be able to scroll up
         overlay.classList.remove('closing');
         overlay.classList.add('show');
-        overlay.style.pointerEvents = 'none'; // Let user scroll through
 
         // Hide the close button and controls for final view
         document.getElementById('cCloseBtn').style.display = 'none';
@@ -3060,10 +3081,66 @@ Happy Girlfriend Day, mentosss. I love you — ass tujhi and all. 😄❤️`;
 
         draw();
         showStarLabels();
-
-        // Show final text
         document.getElementById('cFinalText').classList.add('show');
+
+        // 🎯 KEY: Watch for user scrolling up to dismiss constellation
+        let scrollHandler = function () {
+          if (window.scrollY < document.body.scrollHeight - window.innerHeight - 50) {
+            // User is scrolling up - dismiss constellation with smooth fade
+            dismissPermanentConstellation();
+            window.removeEventListener('scroll', scrollHandler);
+            window.removeEventListener('wheel', wheelHandler);
+            window.removeEventListener('touchmove', touchHandler);
+          }
+        };
+
+        let wheelHandler = function (e) {
+          if (e.deltaY < 0) { // Scrolling up
+            dismissPermanentConstellation();
+            window.removeEventListener('scroll', scrollHandler);
+            window.removeEventListener('wheel', wheelHandler);
+            window.removeEventListener('touchmove', touchHandler);
+          }
+        };
+
+        let lastTouchY = 0;
+        let touchHandler = function (e) {
+          const currentY = e.touches[0].clientY;
+          if (currentY > lastTouchY) { // Finger moving down = scrolling up
+            dismissPermanentConstellation();
+            window.removeEventListener('scroll', scrollHandler);
+            window.removeEventListener('wheel', wheelHandler);
+            window.removeEventListener('touchmove', touchHandler);
+          }
+          lastTouchY = currentY;
+        };
+
+        // Add listeners after a short delay (so accidental scroll doesn't trigger)
+        setTimeout(() => {
+          window.addEventListener('scroll', scrollHandler);
+          window.addEventListener('wheel', wheelHandler);
+          window.addEventListener('touchmove', touchHandler);
+        }, 2000);
       };
+
+      function dismissPermanentConstellation() {
+        const overlay = document.getElementById('constellationOverlay');
+        overlay.style.transition = 'opacity 2.5s cubic-bezier(0.16, 1, 0.3, 1)';
+        overlay.classList.remove('show');
+        animationRunning = false;
+        if (meteorInterval) clearInterval(meteorInterval);
+
+        // Smooth scroll to secret section (the last section)
+        setTimeout(() => {
+          const secretSection = document.getElementById('secret');
+          if (secretSection) {
+            smoothScrollTo(secretSection, 2500);
+          }
+          // Clean up
+          document.querySelectorAll('.star-label').forEach(l => l.remove());
+          overlay.style.transition = '';
+        }, 500);
+      }
 
       const constellationData = [
         { name: "Amoris Aeternum", meaning: "The Eternal Love" },
@@ -3887,11 +3964,10 @@ Happy Girlfriend Day, mentosss. I love you — ass tujhi and all. 😄❤️`;
 
       function closeConstellation() {
         const overlay = document.getElementById('constellationOverlay');
-        overlay.classList.remove('show');
-        overlay.classList.add('closing');
         animationRunning = false;
         if (meteorInterval) clearInterval(meteorInterval);
         document.getElementById('cCloseBtn').classList.remove('show');
+        document.querySelector('.const-top-controls').style.opacity = '0';
 
         // Sync main site's music system with our currently playing track
         if (typeof activeAudio !== 'undefined' && activeAudio && constAudio) {
@@ -3931,21 +4007,26 @@ Happy Girlfriend Day, mentosss. I love you — ass tujhi and all. 😄❤️`;
           }
         }
 
-        // Restore body scroll
+        // INSTANT scroll to secret section (invisible while overlay is up)
         document.body.classList.remove('constellation-open');
         document.body.style.top = '';
-        window.scrollTo(0, savedScrollPos);
+
+        const secretSection = document.getElementById('secret');
+        if (secretSection) {
+          // Jump to secret section instantly (user won't see it because overlay is still up)
+          const secretPos = secretSection.getBoundingClientRect().top + window.scrollY;
+          window.scrollTo(0, secretPos);
+        }
+
+        // NOW fade out overlay to reveal secret section directly
+        overlay.classList.remove('show');
+        overlay.classList.add('closing');
 
         setTimeout(() => {
           document.querySelectorAll('.star-label').forEach(l => l.remove());
           overlay.classList.remove('closing');
-
-          // BUTTERY SMOOTH slow scroll to secret section
-          const secretSection = document.getElementById('secret');
-          if (secretSection) {
-            smoothScrollTo(secretSection, 3000); // 3 second smooth scroll
-          }
-        }, 1200);
+          overlay.style.pointerEvents = ''; // Reset
+        }, 1800);
       }
 
       // Custom smooth scroll with easing
@@ -4257,13 +4338,21 @@ Happy Girlfriend Day, mentosss. I love you — ass tujhi and all. 😄❤️`;
                 }
               }
 
-              // After fade out, show final constellation
+              // After fade out, show final constellation as BACKGROUND
               setTimeout(() => {
                 if (typeof window.reopenConstellationPermanent === 'function') {
+                  // First: mark body as permanent constellation mode
+                  document.body.classList.add('constellation-permanent');
+                  document.body.classList.remove('constellation-open');
+                  document.body.style.top = '';
+                  document.body.style.position = '';
+                  document.body.style.overflow = '';
+
+                  // Show the constellation as background
                   window.reopenConstellationPermanent();
-                  // Scroll to top smoothly for user to scroll up through sections
+
+                  // Wait a moment, then show hint
                   setTimeout(() => {
-                    // Add a hint at top for user
                     showFinalHint();
                   }, 3000);
                 }
@@ -4281,22 +4370,48 @@ Happy Girlfriend Day, mentosss. I love you — ass tujhi and all. 😄❤️`;
       bottom: 30px;
       left: 50%;
       transform: translateX(-50%);
-      color: rgba(220, 230, 255, 0.6);
+      color: rgba(220, 230, 255, 0.7);
       font-family: 'Cormorant Garamond', serif;
       font-style: italic;
-      font-size: 14px;
-      letter-spacing: 2px;
+      font-size: 15px;
+      letter-spacing: 3px;
       z-index: 10000;
       opacity: 0;
       transition: opacity 2s ease;
       pointer-events: none;
       text-align: center;
+      text-shadow: 0 0 10px rgba(0, 0, 0, 0.8);
     `;
         hint.innerHTML = '↑ Scroll up to revisit our story ↑';
         document.body.appendChild(hint);
+
         setTimeout(() => hint.style.opacity = '1', 100);
-        setTimeout(() => hint.style.opacity = '0', 8000);
-        setTimeout(() => hint.remove(), 11000);
+        setTimeout(() => hint.style.opacity = '0', 10000);
+        setTimeout(() => hint.remove(), 13000);
+
+        // Also add a subtle indicator that keeps flashing occasionally
+        setInterval(() => {
+          const flash = document.createElement('div');
+          flash.style.cssText = `
+        position: fixed;
+        bottom: 20px;
+        left: 50%;
+        transform: translateX(-50%);
+        color: rgba(220, 230, 255, 0.3);
+        font-family: 'Poppins', sans-serif;
+        font-size: 20px;
+        z-index: 9999;
+        opacity: 0;
+        transition: opacity 1.5s ease;
+        pointer-events: none;
+        animation: bounceHint 2s ease infinite;
+      `;
+          flash.innerHTML = '↑';
+          document.body.appendChild(flash);
+          setTimeout(() => flash.style.opacity = '1', 100);
+          setTimeout(() => flash.style.opacity = '0', 4000);
+          setTimeout(() => flash.remove(), 5500);
+        }, 30000); // Every 30 seconds, subtle reminder
       }
 
       // Watch for the secret message to become visible
