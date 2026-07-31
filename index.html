@@ -338,8 +338,8 @@
       right: 20px;
       max-width: 190px;
       background: rgba(255, 255, 255, .85);
-      backdrop-filter: blur(12px);
-      -webkit-backdrop-filter: blur(12px);
+      backdrop-filter: blur(8px);
+      -webkit-backdrop-filter: blur(8px);
       color: #333;
       font-size: 11.5px;
       line-height: 1.5;
@@ -2892,28 +2892,36 @@
     }
 
     let wheelThrottle = false;
+    let wheelRAF = null;
+    let lastWheelTime = 0;
+
     window.addEventListener('wheel', (e) => {
       if (navigationLocked() || sectionLocked) { e.preventDefault(); return; }
-      if (wheelThrottle) return;
 
-      const sec = currentSectionEl();
-      const rect = sec.getBoundingClientRect();
-      const scrollingDown = e.deltaY > 0;
-      const atBottomEdge = rect.bottom <= window.innerHeight + 2;
-      const atTopEdge = rect.top >= -2;
+      // Throttle wheel events - only process once per frame
+      if (wheelRAF) return;
 
-      if (scrollingDown && atBottomEdge) {
-        e.preventDefault();
-        goToSection(allSections.indexOf(sec) + 1);
-        wheelThrottle = true;
-        setTimeout(() => wheelThrottle = false, 100);
-      } else if (!scrollingDown && atTopEdge) {
-        e.preventDefault();
-        goToSection(allSections.indexOf(sec) - 1);
-        wheelThrottle = true;
-        setTimeout(() => wheelThrottle = false, 100);
-      }
-    }, { passive: false });
+      const now = Date.now();
+      if (now - lastWheelTime < 50) return; // Min 50ms between checks
+
+      wheelRAF = requestAnimationFrame(() => {
+        const sec = currentSectionEl();
+        const rect = sec.getBoundingClientRect();
+        const scrollingDown = e.deltaY > 0;
+        const atBottomEdge = rect.bottom <= window.innerHeight + 10; // Wider tolerance
+        const atTopEdge = rect.top >= -10;
+
+        if (scrollingDown && atBottomEdge) {
+          goToSection(allSections.indexOf(sec) + 1);
+          lastWheelTime = now;
+        } else if (!scrollingDown && atTopEdge) {
+          goToSection(allSections.indexOf(sec) - 1);
+          lastWheelTime = now;
+        }
+
+        wheelRAF = null;
+      });
+    }, { passive: true }); // Changed to passive for smoother scroll
 
     // Keyboard: same edge-aware logic
     window.addEventListener('keydown', (e) => {
