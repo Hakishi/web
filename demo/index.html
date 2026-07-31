@@ -184,117 +184,169 @@ function drawStars() {
 }
 drawStars();
 
-// ============ 1. CONSTELLATION ============
+// ============ 1. CONSTELLATION (NEW IMPROVED VERSION) ============
 
-// Helper: find closest actual star to a target point
-function findClosestStar(x, y, exclude = []) {
-  let minDist = Infinity;
-  let closest = null;
-  stars.forEach(st => {
-    if (exclude.includes(st)) return;
-    const d = Math.hypot(st.x - x, st.y - y);
-    if (d < minDist) { minDist = d; closest = st; }
-  });
-  return closest;
-}
+// Constellation-specific stars (separate from background)
+let constellationStars = [];
+let constellationLinesNew = [];
 
-// Letter definitions using relative coordinates (0-1 scale within letter box)
-// Each letter is a series of line segments: [[x1,y1,x2,y2], ...]
-const letterPaths = {
-  K: [
-    [0, 0, 0, 1],       // Left vertical
-    [0, 0.5, 1, 0],     // Upper diagonal
-    [0, 0.5, 1, 1]      // Lower diagonal
-  ],
-  A: [
-    [0, 1, 0.5, 0],     // Left diagonal
-    [0.5, 0, 1, 1],     // Right diagonal
-    [0.2, 0.6, 0.8, 0.6] // Middle bar
-  ],
-  L: [
-    [0, 0, 0, 1],       // Vertical
-    [0, 1, 1, 1]        // Horizontal
-  ],
-  U: [
-    [0, 0, 0, 0.8],     // Left vertical
-    [0, 0.8, 0.2, 1],   // Left curve
-    [0.2, 1, 0.8, 1],   // Bottom
-    [0.8, 1, 1, 0.8],   // Right curve
-    [1, 0.8, 1, 0]      // Right vertical
-  ],
-  G: [
-    [1, 0.2, 0.8, 0],   // Top-right curve
-    [0.8, 0, 0.2, 0],   // Top
-    [0.2, 0, 0, 0.2],   // Top-left curve
-    [0, 0.2, 0, 0.8],   // Left
-    [0, 0.8, 0.2, 1],   // Bottom-left curve
-    [0.2, 1, 0.8, 1],   // Bottom
-    [0.8, 1, 1, 0.8],   // Bottom-right curve
-    [1, 0.8, 1, 0.5],   // Right partial
-    [1, 0.5, 0.6, 0.5]  // Inner bar
-  ],
-  O: [
-    [0.2, 0, 0.8, 0],   // Top
-    [0.8, 0, 1, 0.2],   // Top-right
-    [1, 0.2, 1, 0.8],   // Right
-    [1, 0.8, 0.8, 1],   // Bottom-right
-    [0.8, 1, 0.2, 1],   // Bottom
-    [0.2, 1, 0, 0.8],   // Bottom-left
-    [0, 0.8, 0, 0.2],   // Left
-    [0, 0.2, 0.2, 0]    // Top-left
-  ]
+// Font-like letter definitions using dot patterns
+// Each letter is defined as an array of [x, y] points (relative 0-1)
+// Then lines connect consecutive points
+const letterDots = {
+  K: {
+    dots: [[0,0],[0,0.5],[0,1],[1,0],[0.5,0.5],[1,1]],
+    lines: [[0,1],[1,2],[3,4],[4,5]] // indices into dots
+  },
+  A: {
+    dots: [[0,1],[0.25,0.5],[0.5,0],[0.75,0.5],[1,1],[0.25,0.6],[0.75,0.6]],
+    lines: [[0,1],[1,2],[2,3],[3,4],[5,6]]
+  },
+  L: {
+    dots: [[0,0],[0,0.5],[0,1],[0.5,1],[1,1]],
+    lines: [[0,1],[1,2],[2,3],[3,4]]
+  },
+  U: {
+    dots: [[0,0],[0,0.5],[0,0.85],[0.3,1],[0.7,1],[1,0.85],[1,0.5],[1,0]],
+    lines: [[0,1],[1,2],[2,3],[3,4],[4,5],[5,6],[6,7]]
+  },
+  G: {
+    dots: [[1,0.15],[0.5,0],[0,0.15],[0,0.5],[0,0.85],[0.5,1],[1,0.85],[1,0.5],[0.5,0.5]],
+    lines: [[0,1],[1,2],[2,3],[3,4],[4,5],[5,6],[6,7],[7,8]]
+  },
+  O: {
+    dots: [[0.5,0],[0.15,0.15],[0,0.5],[0.15,0.85],[0.5,1],[0.85,0.85],[1,0.5],[0.85,0.15]],
+    lines: [[0,1],[1,2],[2,3],[3,4],[4,5],[5,6],[6,7],[7,0]]
+  },
+  J: {
+    dots: [[0.3,0],[0.7,0],[1,0],[1,0.5],[1,0.85],[0.7,1],[0.3,1],[0,0.85]],
+    lines: [[0,1],[1,2],[2,3],[3,4],[4,5],[5,6],[6,7]]
+  }
 };
 
-function buildLetterLines(letter, offsetX, offsetY, width, height) {
-  const paths = letterPaths[letter];
-  if (!paths) return [];
-  const usedStars = [];
-  const lines = [];
-  paths.forEach(([x1, y1, x2, y2]) => {
-    const from = findClosestStar(offsetX + x1 * width, offsetY + y1 * height, usedStars);
-    if (from) { from.highlighted = true; usedStars.push(from); }
-    const to = findClosestStar(offsetX + x2 * width, offsetY + y2 * height, usedStars);
-    if (to) { to.highlighted = true; usedStars.push(to); }
-    if (from && to) lines.push({ from, to, progress: 0 });
-  });
-  return lines;
+function buildLetter(letter, offsetX, offsetY, width, height) {
+  const def = letterDots[letter];
+  if (!def) return { dots: [], lines: [] };
+  
+  const actualDots = def.dots.map(([x, y]) => ({
+    x: offsetX + x * width,
+    y: offsetY + y * height,
+    fadeIn: 0
+  }));
+  
+  const actualLines = def.lines.map(([fromIdx, toIdx]) => ({
+    from: actualDots[fromIdx],
+    to: actualDots[toIdx],
+    progress: 0
+  }));
+  
+  return { dots: actualDots, lines: actualLines };
 }
 
-function buildHeartLines(centerX, centerY, size) {
-  const points = [];
-  const numPoints = 24;
+function buildHeart(centerX, centerY, size) {
+  const numPoints = 20;
+  const dots = [];
   for (let i = 0; i < numPoints; i++) {
     const t = (i / numPoints) * Math.PI * 2;
     const x = 16 * Math.pow(Math.sin(t), 3);
     const y = -(13 * Math.cos(t) - 5 * Math.cos(2*t) - 2 * Math.cos(3*t) - Math.cos(4*t));
-    points.push({ x: centerX + x * size, y: centerY + y * size });
+    dots.push({ x: centerX + x * size, y: centerY + y * size, fadeIn: 0 });
   }
-  
-  const usedStars = [];
-  const highlighted = [];
-  points.forEach(p => {
-    const star = findClosestStar(p.x, p.y, usedStars);
-    if (star) { star.highlighted = true; usedStars.push(star); highlighted.push(star); }
-  });
   
   const lines = [];
-  for (let i = 0; i < highlighted.length; i++) {
-    lines.push({ from: highlighted[i], to: highlighted[(i + 1) % highlighted.length], progress: 0 });
+  for (let i = 0; i < dots.length; i++) {
+    lines.push({ from: dots[i], to: dots[(i + 1) % dots.length], progress: 0 });
   }
-  return lines;
+  return { dots, lines };
 }
 
-function animateLines(lines, duration = 1500, callback) {
+// Update drawStars to also draw constellation stars and lines
+const originalDrawStars = drawStars;
+
+// Override drawStars with new version
+function drawStarsNew() {
+  ctx.clearRect(0, 0, canvas.width, canvas.height);
+  
+  // Draw background stars (unchanged, always twinkling)
+  stars.forEach(st => {
+    st.o += st.s;
+    const op = Math.abs(Math.sin(st.o)) * 0.6;
+    ctx.beginPath();
+    ctx.arc(st.x, st.y, st.r, 0, 7);
+    ctx.fillStyle = `rgba(255,255,255,${op})`;
+    ctx.fill();
+  });
+  
+  // Draw constellation lines
+  constellationLinesNew.forEach(line => {
+    if (line.progress > 0) {
+      const dx = line.to.x - line.from.x;
+      const dy = line.to.y - line.from.y;
+      const currentX = line.from.x + dx * line.progress;
+      const currentY = line.from.y + dy * line.progress;
+      
+      ctx.beginPath();
+      ctx.moveTo(line.from.x, line.from.y);
+      ctx.lineTo(currentX, currentY);
+      const gradient = ctx.createLinearGradient(line.from.x, line.from.y, currentX, currentY);
+      gradient.addColorStop(0, 'rgba(255, 111, 165, 1)');
+      gradient.addColorStop(0.5, 'rgba(255, 209, 102, 1)');
+      gradient.addColorStop(1, 'rgba(255, 111, 165, 1)');
+      ctx.strokeStyle = gradient;
+      ctx.lineWidth = 2;
+      ctx.shadowBlur = 15;
+      ctx.shadowColor = '#ffd166';
+      ctx.stroke();
+      ctx.shadowBlur = 0;
+    }
+  });
+  
+  // Draw constellation stars (glowing dots)
+  constellationStars.forEach(dot => {
+    if (dot.fadeIn < 1) dot.fadeIn = Math.min(dot.fadeIn + 0.04, 1);
+    
+    // Outer glow
+    ctx.beginPath();
+    ctx.arc(dot.x, dot.y, 10 * dot.fadeIn, 0, 7);
+    const glowGradient = ctx.createRadialGradient(dot.x, dot.y, 0, dot.x, dot.y, 10);
+    glowGradient.addColorStop(0, `rgba(255, 209, 102, ${0.6 * dot.fadeIn})`);
+    glowGradient.addColorStop(1, 'rgba(255, 209, 102, 0)');
+    ctx.fillStyle = glowGradient;
+    ctx.fill();
+    
+    // Inner star
+    ctx.beginPath();
+    ctx.arc(dot.x, dot.y, 3 * dot.fadeIn, 0, 7);
+    ctx.fillStyle = `rgba(255, 255, 255, ${dot.fadeIn})`;
+    ctx.shadowBlur = 20;
+    ctx.shadowColor = '#ffd166';
+    ctx.fill();
+    ctx.shadowBlur = 0;
+  });
+  
+  requestAnimationFrame(drawStarsNew);
+}
+
+// Cancel original animation and start new one
+let drawStarsStarted = false;
+function startNewDrawLoop() {
+  if (drawStarsStarted) return;
+  drawStarsStarted = true;
+  drawStarsNew();
+}
+startNewDrawLoop();
+
+function animateGroup(items, duration = 1500, propName = 'progress', callback) {
   const startTime = performance.now();
   function frame(now) {
     const elapsed = now - startTime;
     const overallProgress = Math.min(elapsed / duration, 1);
     
-    lines.forEach((line, i) => {
-      const lineStart = (i / lines.length) * 0.8;
-      const lineEnd = lineStart + 0.3;
-      const lineProgress = Math.max(0, Math.min(1, (overallProgress - lineStart) / (lineEnd - lineStart)));
-      line.progress = lineProgress;
+    items.forEach((item, i) => {
+      const itemStart = (i / items.length) * 0.7;
+      const itemEnd = itemStart + 0.3;
+      const itemProgress = Math.max(0, Math.min(1, (overallProgress - itemStart) / (itemEnd - itemStart)));
+      item[propName] = itemProgress;
     });
     
     if (overallProgress < 1) requestAnimationFrame(frame);
@@ -305,68 +357,70 @@ function animateLines(lines, duration = 1500, callback) {
 
 function demo1_constellation() {
   // Reset
-  stars.forEach(st => { st.highlighted = false; st.glowIntensity = 0; });
-  constellationLines = [];
-  constellationActive = true;
+  constellationStars = [];
+  constellationLinesNew = [];
   
   const w = canvas.width;
   const h = canvas.height;
   const centerX = w / 2;
   const centerY = h / 2;
   
-  // Letter dimensions (responsive)
-  const letterHeight = Math.min(h * 0.15, 120);
-  const letterWidth = letterHeight * 0.7;
-  const spacing = letterWidth * 0.35;
+  // Letter dimensions
+  const letterHeight = Math.min(h * 0.13, 100);
+  const letterWidth = letterHeight * 0.65;
+  const spacing = letterWidth * 0.4;
   
-  // KALU on top (4 letters)
+  // KALU on top
   const kaluWidth = 4 * letterWidth + 3 * spacing;
   const kaluStartX = centerX - kaluWidth / 2;
-  const kaluY = centerY - letterHeight - 40;
+  const kaluY = centerY - letterHeight - 60;
   
-  const kaluLines = [
-    ...buildLetterLines('K', kaluStartX, kaluY, letterWidth, letterHeight),
-    ...buildLetterLines('A', kaluStartX + (letterWidth + spacing), kaluY, letterWidth, letterHeight),
-    ...buildLetterLines('L', kaluStartX + 2 * (letterWidth + spacing), kaluY, letterWidth, letterHeight),
-    ...buildLetterLines('U', kaluStartX + 3 * (letterWidth + spacing), kaluY, letterWidth, letterHeight)
-  ];
+  const K = buildLetter('K', kaluStartX, kaluY, letterWidth, letterHeight);
+  const A = buildLetter('A', kaluStartX + (letterWidth + spacing), kaluY, letterWidth, letterHeight);
+  const L = buildLetter('L', kaluStartX + 2 * (letterWidth + spacing), kaluY, letterWidth, letterHeight);
+  const U = buildLetter('U', kaluStartX + 3 * (letterWidth + spacing), kaluY, letterWidth, letterHeight);
   
-  // GOJO below (4 letters)
+  // GOJO below
   const gojoWidth = 4 * letterWidth + 3 * spacing;
   const gojoStartX = centerX - gojoWidth / 2;
-  const gojoY = centerY + 40;
+  const gojoY = centerY + 60;
   
-  const gojoLines = [
-    ...buildLetterLines('G', gojoStartX, gojoY, letterWidth, letterHeight),
-    ...buildLetterLines('O', gojoStartX + (letterWidth + spacing), gojoY, letterWidth, letterHeight),
-    ...buildLetterLines('J', gojoStartX + 2 * (letterWidth + spacing), gojoY, letterWidth, letterHeight),
-    ...buildLetterLines('O', gojoStartX + 3 * (letterWidth + spacing), gojoY, letterWidth, letterHeight)
-  ];
+  const G = buildLetter('G', gojoStartX, gojoY, letterWidth, letterHeight);
+  const O1 = buildLetter('O', gojoStartX + (letterWidth + spacing), gojoY, letterWidth, letterHeight);
+  const J = buildLetter('J', gojoStartX + 2 * (letterWidth + spacing), gojoY, letterWidth, letterHeight);
+  const O2 = buildLetter('O', gojoStartX + 3 * (letterWidth + spacing), gojoY, letterWidth, letterHeight);
   
-  // Note: J uses L path (simple vertical + bottom curve). Let's add J
-  // Actually letterPaths.J doesn't exist yet, add it
+  // Add KALU stars first
+  const kaluDots = [...K.dots, ...A.dots, ...L.dots, ...U.dots];
+  const kaluLines = [...K.lines, ...A.lines, ...L.lines, ...U.lines];
+  constellationStars = kaluDots;
   
-  constellationLines = kaluLines;
-  animateLines(kaluLines, 1800, () => {
-    // After KALU, add GOJO lines
-    constellationLines = [...kaluLines, ...gojoLines];
-    animateLines(gojoLines, 1800, () => {
-      // After both names, draw heart
-      const heartSize = Math.min(w, h) * 0.025;
-      const heartLines = buildHeartLines(centerX, centerY, heartSize * 12);
-      constellationLines = [...kaluLines, ...gojoLines, ...heartLines];
-      animateLines(heartLines, 2500);
+  // Wait for dots to fade in, then draw lines
+  setTimeout(() => {
+    constellationLinesNew = kaluLines;
+    animateGroup(kaluLines, 2000, 'progress', () => {
+      // Now show GOJO
+      const gojoDots = [...G.dots, ...O1.dots, ...J.dots, ...O2.dots];
+      const gojoLines = [...G.lines, ...O1.lines, ...J.lines, ...O2.lines];
+      constellationStars = [...kaluDots, ...gojoDots];
+      
+      setTimeout(() => {
+        constellationLinesNew = [...kaluLines, ...gojoLines];
+        animateGroup(gojoLines, 2000, 'progress', () => {
+          // Finally, heart around everything
+          const heartSize = Math.min(w, h) * 0.35 / 30;
+          const heart = buildHeart(centerX, centerY, heartSize * 20);
+          constellationStars = [...kaluDots, ...gojoDots, ...heart.dots];
+          
+          setTimeout(() => {
+            constellationLinesNew = [...kaluLines, ...gojoLines, ...heart.lines];
+            animateGroup(heart.lines, 2500, 'progress');
+          }, 400);
+        });
+      }, 400);
     });
-  });
+  }, 600);
 }
-
-// Add J letter path
-letterPaths.J = [
-  [1, 0, 1, 0.8],       // Right vertical
-  [1, 0.8, 0.8, 1],     // Bottom curve
-  [0.8, 1, 0.2, 1],     // Bottom
-  [0.2, 1, 0, 0.8]      // Left curve
-];
 
 // ============ 2. PHOTO RAIN ============
 const samplePhotos = [
