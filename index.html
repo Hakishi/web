@@ -10,6 +10,40 @@
     href="https://fonts.googleapis.com/css2?family=Orbitron:wght@500;700;900&family=Poppins:wght@300;400;500;600;700&family=Dancing+Script:wght@600;700&family=Cormorant+Garamond:ital,wght@0,400;0,600;1,400&display=swap"
     rel="stylesheet">
   <style>
+    /* Fullscreen button */
+    #fullscreenBtn {
+      position: fixed;
+      top: 20px;
+      left: 20px;
+      z-index: 9997;
+      width: 40px;
+      height: 40px;
+      border-radius: 50%;
+      border: 1px solid rgba(255, 255, 255, 0.2);
+      background: rgba(10, 15, 40, 0.5);
+      color: rgba(255, 255, 255, 0.7);
+      font-size: 16px;
+      cursor: pointer;
+      backdrop-filter: blur(10px);
+      transition: all 0.3s ease;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      padding: 0;
+    }
+
+    #fullscreenBtn:hover {
+      background: rgba(255, 255, 255, 0.15);
+      border-color: rgba(255, 255, 255, 0.5);
+      transform: scale(1.1);
+    }
+
+    #fullscreenBtn.active {
+      background: rgba(255, 200, 100, 0.3);
+      border-color: rgba(255, 200, 100, 0.7);
+      color: rgba(255, 230, 180, 1);
+    }
+
     :root {
       --dark-bg: #06071a;
       --dark-bg2: #0d1128;
@@ -1863,6 +1897,8 @@
 </head>
 
 <body>
+  <!-- Fullscreen toggle button -->
+  <button id="fullscreenBtn" title="Toggle Fullscreen">⛶</button>
 
   <div id="customCursor">💖</div>
   <canvas id="stars"></canvas>
@@ -2309,6 +2345,43 @@
 
   <script src="https://cdn.jsdelivr.net/npm/canvas-confetti@1.9.2/dist/confetti.browser.min.js"></script>
   <script>
+    /* ============ FULLSCREEN TOGGLE ============ */
+    (function () {
+      const btn = document.getElementById('fullscreenBtn');
+      if (!btn) return;
+
+      function toggleFullscreen() {
+        if (!document.fullscreenElement && !document.webkitFullscreenElement) {
+          const el = document.documentElement;
+          if (el.requestFullscreen) el.requestFullscreen();
+          else if (el.webkitRequestFullscreen) el.webkitRequestFullscreen();
+          else if (el.msRequestFullscreen) el.msRequestFullscreen();
+        } else {
+          if (document.exitFullscreen) document.exitFullscreen();
+          else if (document.webkitExitFullscreen) document.webkitExitFullscreen();
+          else if (document.msExitFullscreen) document.msExitFullscreen();
+        }
+      }
+
+      btn.addEventListener('click', toggleFullscreen);
+
+      // Update button state
+      function updateBtnState() {
+        const isFullscreen = !!(document.fullscreenElement || document.webkitFullscreenElement);
+        if (isFullscreen) {
+          btn.classList.add('active');
+          btn.textContent = '⛶';
+          btn.title = 'Exit Fullscreen';
+        } else {
+          btn.classList.remove('active');
+          btn.textContent = '⛶';
+          btn.title = 'Enter Fullscreen';
+        }
+      }
+
+      document.addEventListener('fullscreenchange', updateBtnState);
+      document.addEventListener('webkitfullscreenchange', updateBtnState);
+    })();
     /* ---------- Preloader ---------- */
     window.addEventListener('load', () => {
       let progress = 0;
@@ -2891,6 +2964,101 @@ Happy Girlfriend Day, mentosss. I love you — ass tujhi and all. 😄❤️`;
       let savedScrollPos = 0;
       let wasMusicPlaying = false;
       let ambientOscs = null;
+      let savedConstellationState = null;
+
+      function saveConstellationState() {
+        // Save current state for restoration when note burns
+        savedConstellationState = {
+          dots: JSON.parse(JSON.stringify(constellationDots.map(d => ({
+            x: d.x, y: d.y, group: d.group, magnitude: d.magnitude,
+            color: d.color, baseBrightness: d.baseBrightness,
+            isRevealed: d.isRevealed, revealProgress: d.revealProgress,
+            namedStar: d.namedStar
+          })))),
+          connections: constellationConnections.map(c => ({
+            fromIdx: constellationDots.indexOf(c.from),
+            toIdx: constellationDots.indexOf(c.to),
+            group: c.group, progress: c.progress,
+            fromLit: c.fromLit, toLit: c.toLit,
+            sparkleOffset: c.sparkleOffset
+          })),
+          named: namedStars.map(s => constellationDots.indexOf(s))
+        };
+      }
+
+      // Expose function to reopen constellation permanently
+      window.reopenConstellationPermanent = function () {
+        if (!savedConstellationState) return;
+
+        const overlay = document.getElementById('constellationOverlay');
+        constCanvas = document.getElementById('constellationCanvas');
+        constCtx = constCanvas.getContext('2d');
+        constCanvas.width = innerWidth;
+        constCanvas.height = innerHeight;
+
+        // Don't lock body - user should be able to scroll up
+        overlay.classList.remove('closing');
+        overlay.classList.add('show');
+        overlay.style.pointerEvents = 'none'; // Let user scroll through
+
+        // Hide the close button and controls for final view
+        document.getElementById('cCloseBtn').style.display = 'none';
+        document.querySelector('.const-top-controls').style.display = 'none';
+
+        // Restore constellation state
+        constellationDots = savedConstellationState.dots.map(d => ({
+          ...d,
+          scint: generateScintillation()
+        }));
+
+        constellationConnections = savedConstellationState.connections.map(c => ({
+          from: constellationDots[c.fromIdx],
+          to: constellationDots[c.toIdx],
+          group: c.group,
+          progress: c.progress,
+          fromLit: c.fromLit,
+          toLit: c.toLit,
+          sparkleOffset: c.sparkleOffset
+        }));
+
+        namedStars = savedConstellationState.named.map(i => constellationDots[i]);
+
+        // Regenerate background stars
+        bgStars = [];
+        const w = constCanvas.width;
+        const h = constCanvas.height;
+        const numBgStars = 250;
+        const minDist = 40;
+        let attempts = 0;
+        while (bgStars.length < numBgStars && attempts < numBgStars * 5) {
+          attempts++;
+          const x = Math.random() * w;
+          const y = Math.random() * h;
+          const tooClose = constellationDots.some(d => Math.hypot(d.x - x, d.y - y) < minDist);
+          if (tooClose) continue;
+          const magnitude = realStarMagnitude();
+          bgStars.push({
+            x, y, magnitude: magnitude,
+            color: realStarColor(),
+            baseBrightness: 0.5 + Math.random() * 0.4,
+            scint: generateScintillation()
+          });
+        }
+
+        animationRunning = true;
+        frameCount = 0;
+        lineFinished = true;
+
+        meteorInterval = setInterval(() => {
+          if (Math.random() < 0.25) spawnMeteor();
+        }, 10000);
+
+        draw();
+        showStarLabels();
+
+        // Show final text
+        document.getElementById('cFinalText').classList.add('show');
+      };
 
       const constellationData = [
         { name: "Amoris Aeternum", meaning: "The Eternal Love" },
@@ -3679,7 +3847,6 @@ Happy Girlfriend Day, mentosss. I love you — ass tujhi and all. 😄❤️`;
       }
 
       function startConstellationAnimation() {
-        initAudio();
         constellationDots.forEach(d => { d.isRevealed = false; d.revealProgress = 0; });
         constellationConnections.forEach(c => { c.progress = 0; c.fromLit = false; c.toLit = false; });
         sparkParticles = [];
@@ -3687,8 +3854,6 @@ Happy Girlfriend Day, mentosss. I love you — ass tujhi and all. 😄❤️`;
         lineFinished = false;
         document.querySelectorAll('.star-label').forEach(l => l.remove());
         document.getElementById('cFinalText').classList.remove('show');
-
-        playAmbientPad();
 
         const shivamLines = constellationConnections.filter(c => c.group === 'shivam');
         const janviLines = constellationConnections.filter(c => c.group === 'janvi');
@@ -3702,6 +3867,7 @@ Happy Girlfriend Day, mentosss. I love you — ass tujhi and all. 😄❤️`;
                   setTimeout(() => {
                     lineFinished = true;
                     showStarLabels();
+                    saveConstellationState(); // SAVE for later restoration
                     setTimeout(() => {
                       document.getElementById('cFinalText').classList.add('show');
                       document.getElementById('cCloseBtn').classList.add('show');
@@ -3723,15 +3889,12 @@ Happy Girlfriend Day, mentosss. I love you — ass tujhi and all. 😄❤️`;
         document.getElementById('cCloseBtn').classList.remove('show');
 
         // Sync main site's music system with our currently playing track
-        // This makes the transition seamless - music continues into secret section
         if (typeof activeAudio !== 'undefined' && activeAudio && constAudio) {
-          // Transfer playing state to main site's audio system
           activeAudio.src = SECRET_SECTION_MUSIC;
-          activeAudio.currentTime = constAudio.currentTime; // Continue from same position
+          activeAudio.currentTime = constAudio.currentTime;
           if (typeof currentTrack !== 'undefined') currentTrack = SECRET_SECTION_MUSIC;
           if (typeof musicEnabled !== 'undefined') musicEnabled = true;
 
-          // Fade out our constellation audio
           const startVol = constAudio.volume;
           let fadeStep = 0;
           const fadeOut = setInterval(() => {
@@ -3746,7 +3909,6 @@ Happy Girlfriend Day, mentosss. I love you — ass tujhi and all. 😄❤️`;
             }
           }, 50);
 
-          // Fade in main site audio at same time
           activeAudio.volume = 0;
           activeAudio.play().then(() => {
             let vol = 0;
@@ -3758,7 +3920,6 @@ Happy Girlfriend Day, mentosss. I love you — ass tujhi and all. 😄❤️`;
             if (typeof musicBtn !== 'undefined') musicBtn.classList.add('playing');
           }).catch(() => { });
         } else {
-          // Fallback: just stop constellation audio
           if (constAudio) {
             constAudio.pause();
             constAudio = null;
@@ -3774,18 +3935,47 @@ Happy Girlfriend Day, mentosss. I love you — ass tujhi and all. 😄❤️`;
           document.querySelectorAll('.star-label').forEach(l => l.remove());
           overlay.classList.remove('closing');
 
-          // Auto-scroll to secret section
+          // BUTTERY SMOOTH slow scroll to secret section
           const secretSection = document.getElementById('secret');
           if (secretSection) {
-            secretSection.scrollIntoView({ behavior: 'smooth' });
+            smoothScrollTo(secretSection, 3000); // 3 second smooth scroll
           }
         }, 1200);
+      }
+
+      // Custom smooth scroll with easing
+      function smoothScrollTo(targetElement, duration = 3000) {
+        const targetPos = targetElement.getBoundingClientRect().top + window.scrollY;
+        const startPos = window.scrollY;
+        const distance = targetPos - startPos;
+        const startTime = performance.now();
+
+        // Smooth cubic-bezier easing (ease-in-out)
+        function easeInOutQuart(t) {
+          return t < 0.5
+            ? 8 * t * t * t * t
+            : 1 - Math.pow(-2 * t + 2, 4) / 2;
+        }
+
+        function animateScroll(currentTime) {
+          const elapsed = currentTime - startTime;
+          const progress = Math.min(elapsed / duration, 1);
+          const eased = easeInOutQuart(progress);
+
+          window.scrollTo(0, startPos + distance * eased);
+
+          if (progress < 1) {
+            requestAnimationFrame(animateScroll);
+          }
+        }
+
+        requestAnimationFrame(animateScroll);
       }
 
       window.showConstellationSurprise = function () {
         savedScrollPos = window.scrollY;
 
-        // Pause main music with smooth fade-out
+        // Fade out main music smoothly
         if (typeof musicEnabled !== 'undefined' && musicEnabled && typeof activeAudio !== 'undefined' && activeAudio) {
           wasMusicPlaying = true;
           try {
@@ -3797,7 +3987,7 @@ Happy Girlfriend Day, mentosss. I love you — ass tujhi and all. 😄❤️`;
               if (fadeStep >= 10) {
                 clearInterval(fadeOut);
                 activeAudio.pause();
-                activeAudio.volume = 1; // Reset for later
+                activeAudio.volume = 1;
               }
             }, 50);
           } catch (e) { }
@@ -3826,6 +4016,10 @@ Happy Girlfriend Day, mentosss. I love you — ass tujhi and all. 😄❤️`;
         animationRunning = true;
         frameCount = 0;
 
+        // Start music IMMEDIATELY as transition begins
+        initAudio();
+        playAmbientPad();
+
         meteorInterval = setInterval(() => {
           if (Math.random() < 0.25) spawnMeteor();
         }, 10000);
@@ -3833,7 +4027,9 @@ Happy Girlfriend Day, mentosss. I love you — ass tujhi and all. 😄❤️`;
 
         draw();
 
-        setTimeout(startConstellationAnimation, 1800);
+        // Wait 3 seconds after transition before starting line drawing
+        // (1.8s transition + 3s appreciation delay)
+        setTimeout(startConstellationAnimation, 4800);
       };
 
       document.getElementById('cCloseBtn').addEventListener('click', closeConstellation);
@@ -3870,7 +4066,7 @@ Happy Girlfriend Day, mentosss. I love you — ass tujhi and all. 😄❤️`;
       });
     })();
 
-    /* ============ BURNING NOTE ANIMATION ============ */
+    /* ============ BURNING NOTE ANIMATION (NATURAL & SLOW) ============ */
     (function () {
       let burnStarted = false;
 
@@ -3881,7 +4077,6 @@ Happy Girlfriend Day, mentosss. I love you — ass tujhi and all. 😄❤️`;
         const messageBox = document.getElementById('secretMessage');
         if (!messageBox) return;
 
-        const rect = messageBox.getBoundingClientRect();
         const canvas = document.createElement('canvas');
         canvas.className = 'burn-canvas';
         canvas.width = messageBox.offsetWidth;
@@ -3894,116 +4089,221 @@ Happy Girlfriend Day, mentosss. I love you — ass tujhi and all. 😄❤️`;
 
         setTimeout(() => canvas.classList.add('active'), 100);
 
-        // Progressive burn from top-left
-        const burnDuration = 10000; // 10 seconds
+        // Natural burn - takes 15 seconds for full burn
+        const burnDuration = 15000;
         const startTime = performance.now();
         const embers = [];
+        const flameParticles = [];
+
+        // Multi-front burn with organic edges
+        // Each "burn point" spreads outward like real fire
+        const burnPoints = [];
+        // Start with 3 burn origins near top-left for organic look
+        burnPoints.push({ x: 0, y: 0, radius: 0, spreadRate: 1 });
+        burnPoints.push({ x: 30, y: 15, radius: 0, spreadRate: 0.9 });
+        burnPoints.push({ x: 10, y: 40, radius: 0, spreadRate: 0.95 });
 
         function drawBurn(now) {
           const elapsed = now - startTime;
           const progress = Math.min(elapsed / burnDuration, 1);
 
-          // Diagonal burn line moves from top-left to bottom-right
-          const burnRadius = progress * Math.hypot(w, h) * 1.2;
-
           ctx.clearRect(0, 0, w, h);
 
-          // Create burn mask - black where burned, transparent elsewhere
-          // Draw the burn shape
-          const grad = ctx.createRadialGradient(0, 0, 0, 0, 0, burnRadius);
-          grad.addColorStop(0, 'rgba(0, 0, 0, 1)');
-          grad.addColorStop(0.85, 'rgba(0, 0, 0, 0.95)');
-          grad.addColorStop(0.92, 'rgba(30, 15, 5, 0.9)');
-          grad.addColorStop(0.96, 'rgba(120, 40, 10, 0.7)');
-          grad.addColorStop(0.99, 'rgba(255, 120, 30, 0.5)');
-          grad.addColorStop(1, 'rgba(255, 200, 100, 0)');
+          // Grow all burn points
+          const maxRadius = Math.hypot(w, h) * 1.3;
+          burnPoints.forEach(bp => {
+            bp.radius = progress * maxRadius * bp.spreadRate;
+          });
 
-          ctx.fillStyle = grad;
-          ctx.beginPath();
-          ctx.arc(0, 0, burnRadius, 0, Math.PI * 2);
-          ctx.fill();
-
-          // Add jagged burn edge
-          ctx.globalCompositeOperation = 'source-atop';
-          for (let i = 0; i < 100; i++) {
-            const angle = (i / 100) * Math.PI / 2;
-            const r = burnRadius * (0.95 + Math.random() * 0.1);
-            const x = Math.cos(angle) * r;
-            const y = Math.sin(angle) * r;
-            if (Math.random() < 0.4) {
-              const flameGrad = ctx.createRadialGradient(x, y, 0, x, y, 15);
-              flameGrad.addColorStop(0, 'rgba(255, 200, 80, 0.8)');
-              flameGrad.addColorStop(0.5, 'rgba(255, 100, 20, 0.5)');
-              flameGrad.addColorStop(1, 'rgba(200, 50, 10, 0)');
-              ctx.fillStyle = flameGrad;
-              ctx.beginPath();
-              ctx.arc(x, y, 15, 0, Math.PI * 2);
-              ctx.fill();
-            }
-          }
-          ctx.globalCompositeOperation = 'source-over';
-
-          // Emit embers along burn edge
-          if (Math.random() < 0.4 && progress < 0.95) {
-            const angle = Math.random() * Math.PI / 2;
-            const r = burnRadius * 0.98;
-            embers.push({
-              x: Math.cos(angle) * r,
-              y: Math.sin(angle) * r,
-              vx: (Math.random() - 0.5) * 2,
-              vy: -Math.random() * 3 - 1,
-              life: 1,
-              size: 1 + Math.random() * 2
+          // Occasionally add new burn points near existing ones (spreading fire)
+          if (progress < 0.7 && Math.random() < 0.03 && burnPoints.length < 8) {
+            const parent = burnPoints[Math.floor(Math.random() * burnPoints.length)];
+            const angle = Math.random() * Math.PI * 2;
+            const dist = parent.radius * 0.7;
+            burnPoints.push({
+              x: parent.x + Math.cos(angle) * dist,
+              y: parent.y + Math.sin(angle) * dist,
+              radius: 0,
+              spreadRate: 0.6 + Math.random() * 0.4
             });
           }
 
-          // Draw embers
+          // Draw burn areas using composite operation for natural blending
+          ctx.save();
+
+          // Layer 1: Deep black burned area
+          burnPoints.forEach(bp => {
+            const grad = ctx.createRadialGradient(bp.x, bp.y, 0, bp.x, bp.y, bp.radius);
+            grad.addColorStop(0, 'rgba(0, 0, 0, 0.98)');
+            grad.addColorStop(0.7, 'rgba(0, 0, 0, 0.95)');
+            grad.addColorStop(0.88, 'rgba(15, 8, 3, 0.9)');
+            grad.addColorStop(0.94, 'rgba(60, 25, 8, 0.75)');
+            grad.addColorStop(0.98, 'rgba(180, 60, 15, 0.5)');
+            grad.addColorStop(1, 'rgba(255, 120, 30, 0)');
+            ctx.fillStyle = grad;
+            ctx.beginPath();
+            ctx.arc(bp.x, bp.y, bp.radius, 0, Math.PI * 2);
+            ctx.fill();
+          });
+
+          // Layer 2: Add jagged/organic edge effect using noise
+          burnPoints.forEach(bp => {
+            if (bp.radius > 5) {
+              const numSpikes = 30;
+              for (let i = 0; i < numSpikes; i++) {
+                const angle = (i / numSpikes) * Math.PI * 2 + Math.sin(now * 0.001 + i) * 0.2;
+                const spikeR = bp.radius * (0.92 + Math.random() * 0.15);
+                const x = bp.x + Math.cos(angle) * spikeR;
+                const y = bp.y + Math.sin(angle) * spikeR;
+
+                if (x >= 0 && x <= w && y >= 0 && y <= h) {
+                  // Flickering flame edge
+                  const flameSize = 8 + Math.random() * 8;
+                  const flameGrad = ctx.createRadialGradient(x, y, 0, x, y, flameSize);
+                  flameGrad.addColorStop(0, `rgba(255, ${180 + Math.random() * 60}, 60, ${0.4 + Math.random() * 0.3})`);
+                  flameGrad.addColorStop(0.4, `rgba(255, 100, 20, ${0.3 + Math.random() * 0.2})`);
+                  flameGrad.addColorStop(1, 'rgba(180, 40, 10, 0)');
+                  ctx.fillStyle = flameGrad;
+                  ctx.beginPath();
+                  ctx.arc(x, y, flameSize, 0, Math.PI * 2);
+                  ctx.fill();
+
+                  // Small bright flame tips
+                  if (Math.random() < 0.3) {
+                    ctx.fillStyle = `rgba(255, 240, 180, ${0.6})`;
+                    ctx.beginPath();
+                    ctx.arc(x, y, 1.5, 0, Math.PI * 2);
+                    ctx.fill();
+                  }
+                }
+              }
+            }
+          });
+
+          ctx.restore();
+
+          // Emit embers rising up from burn edges
+          if (progress < 0.9 && Math.random() < 0.6) {
+            burnPoints.forEach(bp => {
+              if (Math.random() < 0.3) {
+                const angle = Math.random() * Math.PI * 2;
+                const r = bp.radius * 0.95;
+                const ex = bp.x + Math.cos(angle) * r;
+                const ey = bp.y + Math.sin(angle) * r;
+                if (ex >= -20 && ex <= w + 20 && ey >= -20 && ey <= h + 20) {
+                  embers.push({
+                    x: ex, y: ey,
+                    vx: (Math.random() - 0.5) * 1.5,
+                    vy: -Math.random() * 2 - 0.5,
+                    life: 1,
+                    size: 0.8 + Math.random() * 1.8,
+                    color: [255, 100 + Math.random() * 100, 20 + Math.random() * 40]
+                  });
+                }
+              }
+            });
+          }
+
+          // Draw & update embers
           for (let i = embers.length - 1; i >= 0; i--) {
             const e = embers[i];
-            e.life -= 0.02;
+            e.life -= 0.015;
             e.x += e.vx;
             e.y += e.vy;
-            e.vy += 0.05;
+            e.vy += 0.03;
+            e.vx += (Math.random() - 0.5) * 0.1; // Slight drift
             if (e.life <= 0) { embers.splice(i, 1); continue; }
-            ctx.fillStyle = `rgba(255, ${100 + Math.random() * 100}, 20, ${e.life * 0.8})`;
-            ctx.beginPath();
-            ctx.arc(e.x, e.y, e.size * e.life, 0, Math.PI * 2);
-            ctx.fill();
-            // Glow
-            const glowGrad = ctx.createRadialGradient(e.x, e.y, 0, e.x, e.y, 4);
-            glowGrad.addColorStop(0, `rgba(255, 200, 80, ${e.life * 0.6})`);
+
+            // Ember glow
+            const glowGrad = ctx.createRadialGradient(e.x, e.y, 0, e.x, e.y, 6);
+            glowGrad.addColorStop(0, `rgba(255, 200, 80, ${e.life * 0.7})`);
+            glowGrad.addColorStop(0.5, `rgba(255, ${e.color[1]}, ${e.color[2]}, ${e.life * 0.4})`);
             glowGrad.addColorStop(1, 'rgba(255, 100, 20, 0)');
             ctx.fillStyle = glowGrad;
             ctx.beginPath();
-            ctx.arc(e.x, e.y, 4, 0, Math.PI * 2);
+            ctx.arc(e.x, e.y, 6, 0, Math.PI * 2);
+            ctx.fill();
+
+            // Ember core
+            ctx.fillStyle = `rgba(255, ${180 + Math.random() * 60}, ${e.color[2]}, ${e.life * 0.9})`;
+            ctx.beginPath();
+            ctx.arc(e.x, e.y, e.size * e.life, 0, Math.PI * 2);
             ctx.fill();
           }
 
-          // Fade out the actual text underneath the burned area
-          messageBox.style.filter = `brightness(${1 - progress * 0.7})`;
+          // Progressively darken the actual note underneath
+          messageBox.style.filter = `brightness(${1 - progress * 0.8}) contrast(${1 + progress * 0.3})`;
 
           if (progress < 1 || embers.length > 0) {
             requestAnimationFrame(drawBurn);
           } else {
-            // Fully burned - fade everything out
-            messageBox.style.transition = 'opacity 2s ease';
-            messageBox.style.opacity = '0';
+            // Burn complete - fade out and TRIGGER FINAL CONSTELLATION
+            setTimeout(() => {
+              messageBox.style.transition = 'opacity 2s ease';
+              messageBox.style.opacity = '0';
+
+              // Fade out everything except header
+              const secretSection = document.getElementById('secret');
+              if (secretSection) {
+                const sectionInner = secretSection.querySelector('.section-inner');
+                if (sectionInner) {
+                  sectionInner.style.transition = 'opacity 3s ease';
+                  sectionInner.style.opacity = '0';
+                }
+              }
+
+              // After fade out, show final constellation
+              setTimeout(() => {
+                if (typeof window.reopenConstellationPermanent === 'function') {
+                  window.reopenConstellationPermanent();
+                  // Scroll to top smoothly for user to scroll up through sections
+                  setTimeout(() => {
+                    // Add a hint at top for user
+                    showFinalHint();
+                  }, 3000);
+                }
+              }, 3500);
+            }, 500);
           }
         }
         requestAnimationFrame(drawBurn);
+      }
+
+      function showFinalHint() {
+        const hint = document.createElement('div');
+        hint.style.cssText = `
+      position: fixed;
+      bottom: 30px;
+      left: 50%;
+      transform: translateX(-50%);
+      color: rgba(220, 230, 255, 0.6);
+      font-family: 'Cormorant Garamond', serif;
+      font-style: italic;
+      font-size: 14px;
+      letter-spacing: 2px;
+      z-index: 10000;
+      opacity: 0;
+      transition: opacity 2s ease;
+      pointer-events: none;
+      text-align: center;
+    `;
+        hint.innerHTML = '↑ Scroll up to revisit our story ↑';
+        document.body.appendChild(hint);
+        setTimeout(() => hint.style.opacity = '1', 100);
+        setTimeout(() => hint.style.opacity = '0', 8000);
+        setTimeout(() => hint.remove(), 11000);
       }
 
       // Watch for the secret message to become visible
       const checkInterval = setInterval(() => {
         const msg = document.getElementById('secretMessage');
         if (msg && msg.classList.contains('show')) {
-          // Wait for typewriter to finish, then wait 5 more seconds
-          const textLength = 500; // Approximate length of secret note
-          const typewriterSpeed = 18; // ms per character
+          const textLength = 500;
+          const typewriterSpeed = 18;
           const totalTypewriterTime = textLength * typewriterSpeed;
 
           setTimeout(() => {
-            setTimeout(startBurning, 5000); // 5 seconds after text appears
+            setTimeout(startBurning, 7000);
           }, totalTypewriterTime);
 
           clearInterval(checkInterval);
