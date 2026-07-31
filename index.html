@@ -83,12 +83,10 @@
 
     html {
       scroll-behavior: smooth;
-      scroll-snap-type: y proximity;
+      scroll-snap-type: y mandatory;
+      scroll-snap-stop: normal;
       -webkit-overflow-scrolling: touch;
-      /* iOS smooth momentum scroll */
-      scroll-padding-top: 0;
       overscroll-behavior-y: contain;
-      /* Prevents pull-to-refresh interference */
     }
 
     /* Better touch handling on mobile */
@@ -366,6 +364,7 @@
       background: rgba(255, 255, 255, .85);
       backdrop-filter: blur(12px);
       -webkit-backdrop-filter: blur(12px);
+      contain: layout style paint;
       color: #333;
       padding: 9px 20px;
       border-radius: 30px;
@@ -392,6 +391,7 @@
       z-index: 997;
       background: rgba(20, 10, 30, .9);
       backdrop-filter: blur(8px);
+      contain: layout style paint;
       border-radius: 20px;
       padding: 10px 14px;
       display: flex;
@@ -2083,6 +2083,59 @@
 
     #loveletter .section-inner {
       min-height: 700px;
+
+      /* Smooth scroll performance optimizations */
+      .section {
+        transform: translateZ(0);
+        backface-visibility: hidden;
+        will-change: transform;
+        contain: layout style;
+      }
+
+      /* Prevent expensive repaints during scroll */
+      .section-media,
+      .section-overlay {
+        transform: translateZ(0);
+        will-change: auto;
+      }
+
+      /* Isolate fixed elements from scroll */
+      #stars,
+      #scrollProgress,
+      .dot-nav,
+      #musicToggle,
+      #fullscreenBtn,
+      .floating-note,
+      .tap-music-prompt,
+      #customCursor {
+        will-change: transform;
+        contain: layout style paint;
+      }
+
+      /* Force GPU acceleration on animated elements */
+      .floating-photo,
+      .fh,
+      .cursor-heart,
+      .click-sparkle,
+      .hand,
+      .paw,
+      .chat-bubble,
+      .reveal {
+        transform: translateZ(0);
+        backface-visibility: hidden;
+      }
+
+      /* Prevent scroll jitter from long sections */
+      .section.compact {
+        min-height: 60vh;
+      }
+
+      /* Smoother transitions */
+      @supports (scroll-behavior: smooth) {
+        html {
+          scroll-behavior: smooth;
+        }
+      }
   </style>
 </head>
 
