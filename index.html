@@ -4309,7 +4309,7 @@ Happy Girlfriend Day, mentosss. I love you — ass tujhi and all. 😄❤️`;
       });
     })();
 
-    /* ============ SIMPLE BURN ANIMATION (WORKING) ============ */
+    /* ============ SIMPLE BURN ANIMATION (FIXED) ============ */
     (function () {
       let burnStarted = false;
 
@@ -4317,7 +4317,7 @@ Happy Girlfriend Day, mentosss. I love you — ass tujhi and all. 😄❤️`;
         if (burnStarted) return;
         burnStarted = true;
 
-        console.log('🔥 Starting burn animation'); // Debug
+        console.log('🔥 Starting burn animation');
 
         const messageBox = document.getElementById('secretMessage');
         if (!messageBox) {
@@ -4356,7 +4356,8 @@ Happy Girlfriend Day, mentosss. I love you — ass tujhi and all. 😄❤️`;
           ctx.clearRect(0, 0, w, h);
 
           const maxDist = Math.hypot(w, h);
-          const burnDist = progress * maxDist * 1.2;
+          // Ensure burnDist is always at least 5px to prevent errors
+          const burnDist = Math.max(5, progress * maxDist * 1.2);
 
           // Draw burn area with wavy edge
           ctx.save();
@@ -4367,13 +4368,12 @@ Happy Girlfriend Day, mentosss. I love you — ass tujhi and all. 😄❤️`;
           for (let i = 0; i <= numPoints; i++) {
             const angle = (i / numPoints) * Math.PI / 2;
             const wave = Math.sin(angle * 8 + t * 2) * 15 + Math.cos(angle * 12 - t * 1.5) * 8;
-            const r = burnDist + wave;
+            const r = Math.max(1, burnDist + wave);
             const x = Math.cos(angle) * r;
             const y = Math.sin(angle) * r;
             ctx.lineTo(x, y);
           }
 
-          // Close the shape back to origin
           ctx.lineTo(0, h);
           ctx.lineTo(0, 0);
           ctx.closePath();
@@ -4383,8 +4383,10 @@ Happy Girlfriend Day, mentosss. I love you — ass tujhi and all. 😄❤️`;
           ctx.fillStyle = 'rgb(15, 8, 3)';
           ctx.fillRect(0, 0, w, h);
 
-          // Add glow near edge
-          const grad = ctx.createRadialGradient(0, 0, burnDist * 0.7, 0, 0, burnDist);
+          // Glow near edge — FIXED with Math.max to prevent negative radii
+          const innerR = Math.max(1, burnDist * 0.7);
+          const outerR = Math.max(innerR + 1, burnDist);
+          const grad = ctx.createRadialGradient(0, 0, innerR, 0, 0, outerR);
           grad.addColorStop(0, 'rgba(15, 8, 3, 0)');
           grad.addColorStop(0.7, 'rgba(80, 30, 10, 0.7)');
           grad.addColorStop(0.9, 'rgba(220, 80, 20, 0.8)');
@@ -4439,17 +4441,20 @@ Happy Girlfriend Day, mentosss. I love you — ass tujhi and all. 😄❤️`;
             e.vy += 0.04;
             if (e.life <= 0) { embers.splice(i, 1); continue; }
 
-            const glowGrad = ctx.createRadialGradient(e.x, e.y, 0, e.x, e.y, e.size * 3);
+            // Safe glow with Math.max
+            const emberOuterR = Math.max(1, e.size * 3);
+            const glowGrad = ctx.createRadialGradient(e.x, e.y, 0, e.x, e.y, emberOuterR);
             glowGrad.addColorStop(0, `rgba(255, 200, 100, ${e.life * 0.7})`);
             glowGrad.addColorStop(1, 'rgba(255, 100, 20, 0)');
             ctx.fillStyle = glowGrad;
             ctx.beginPath();
-            ctx.arc(e.x, e.y, e.size * 3, 0, Math.PI * 2);
+            ctx.arc(e.x, e.y, emberOuterR, 0, Math.PI * 2);
             ctx.fill();
 
+            const coreSize = Math.max(0.1, e.size * e.life);
             ctx.fillStyle = `rgba(255, ${150 + e.life * 100}, 50, ${e.life * 0.95})`;
             ctx.beginPath();
-            ctx.arc(e.x, e.y, e.size * e.life, 0, Math.PI * 2);
+            ctx.arc(e.x, e.y, coreSize, 0, Math.PI * 2);
             ctx.fill();
           }
 
@@ -4491,18 +4496,14 @@ Happy Girlfriend Day, mentosss. I love you — ass tujhi and all. 😄❤️`;
         requestAnimationFrame(drawBurn);
       }
 
-      // Watch for the secret message to appear
       const checkInterval = setInterval(() => {
         const msg = document.getElementById('secretMessage');
         if (msg && msg.classList.contains('show')) {
           console.log('✅ Secret message visible, waiting for burn...');
-
-          // Wait for typewriter (~9 seconds) + 5 seconds after
           setTimeout(() => {
             console.log('🔥 Triggering burn now');
             startBurning();
-          }, 14000); // 14 seconds after showing = enough for text to finish + 5s pause
-
+          }, 14000);
           clearInterval(checkInterval);
         }
       }, 500);
