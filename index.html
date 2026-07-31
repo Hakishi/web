@@ -2887,9 +2887,11 @@
       lockBriefly();
     }
 
-    // Wheel: allow natural scroll within a tall section; snap only once its edge is reached
+    let wheelThrottle = false;
     window.addEventListener('wheel', (e) => {
       if (navigationLocked() || sectionLocked) { e.preventDefault(); return; }
+      if (wheelThrottle) return;
+
       const sec = currentSectionEl();
       const rect = sec.getBoundingClientRect();
       const scrollingDown = e.deltaY > 0;
@@ -2899,11 +2901,14 @@
       if (scrollingDown && atBottomEdge) {
         e.preventDefault();
         goToSection(allSections.indexOf(sec) + 1);
+        wheelThrottle = true;
+        setTimeout(() => wheelThrottle = false, 100);
       } else if (!scrollingDown && atTopEdge) {
         e.preventDefault();
         goToSection(allSections.indexOf(sec) - 1);
+        wheelThrottle = true;
+        setTimeout(() => wheelThrottle = false, 100);
       }
-      // else: let the browser scroll naturally within the section
     }, { passive: false });
 
     // Keyboard: same edge-aware logic
