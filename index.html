@@ -2946,12 +2946,11 @@
       lockBriefly();
     }
 
-    let wheelThrottle = false;
     let wheelRAF = null;
     let lastWheelTime = 0;
 
     window.addEventListener('wheel', (e) => {
-      if (navigationLocked() || sectionLocked) { e.preventDefault(); return; }
+      if (navigationLocked() || sectionLocked) return;
 
       // Throttle wheel events - only process once per frame
       if (wheelRAF) return;
@@ -2959,11 +2958,14 @@
       const now = Date.now();
       if (now - lastWheelTime < 50) return; // Min 50ms between checks
 
+      // ✅ Capture event data IMMEDIATELY (before RAF)
+      const deltaY = e.deltaY;
+
       wheelRAF = requestAnimationFrame(() => {
         const sec = currentSectionEl();
         const rect = sec.getBoundingClientRect();
-        const scrollingDown = e.deltaY > 0;
-        const atBottomEdge = rect.bottom <= window.innerHeight + 10; // Wider tolerance
+        const scrollingDown = deltaY > 0; // Use captured value
+        const atBottomEdge = rect.bottom <= window.innerHeight + 10;
         const atTopEdge = rect.top >= -10;
 
         if (scrollingDown && atBottomEdge) {
@@ -2976,7 +2978,7 @@
 
         wheelRAF = null;
       });
-    }, { passive: true }); // Changed to passive for smoother scroll
+    }, { passive: true });
 
     // Keyboard: same edge-aware logic
     window.addEventListener('keydown', (e) => {
