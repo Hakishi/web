@@ -1,0 +1,333 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<title>Surprise Demos — Pick Your Favorite</title>
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<style>
+  * { margin: 0; padding: 0; box-sizing: border-box; font-family: 'Poppins', 'Segoe UI', sans-serif; }
+  body { background: linear-gradient(135deg, #06071a, #0d1128); color: #fff; min-height: 100vh; overflow: hidden; }
+  
+  .container { position: relative; z-index: 10; padding: 40px 20px; text-align: center; }
+  h1 { color: #ff6fa5; margin-bottom: 10px; font-size: 2rem; }
+  .subtitle { color: #aaa; margin-bottom: 30px; }
+  
+  .demo-buttons { display: flex; flex-wrap: wrap; justify-content: center; gap: 15px; margin-bottom: 20px; }
+  .demo-btn { padding: 16px 26px; border-radius: 50px; border: 2px solid #ff6fa5; background: transparent; color: #fff; font-size: 15px; cursor: pointer; transition: 0.3s; font-weight: 600; }
+  .demo-btn:hover { background: #ff6fa5; transform: translateY(-3px); box-shadow: 0 10px 30px rgba(255,111,165,0.4); }
+  .reset-btn { padding: 12px 24px; border-radius: 30px; border: 2px solid #38bdf8; background: transparent; color: #38bdf8; cursor: pointer; margin-top: 10px; }
+  .reset-btn:hover { background: #38bdf8; color: #000; }
+  
+  /* ============ SHARED CANVAS ============ */
+  #starCanvas { position: fixed; inset: 0; z-index: 1; }
+  
+  /* ============ 1. CONSTELLATION ============ */
+  .constellation-text { position: fixed; top: 50%; left: 50%; transform: translate(-50%, -50%); font-family: 'Dancing Script', cursive; font-size: clamp(2rem, 8vw, 5rem); color: #ff6fa5; text-shadow: 0 0 30px #ff6fa5, 0 0 60px rgba(255,111,165,0.5); opacity: 0; transition: opacity 2s ease 2s; z-index: 5; pointer-events: none; text-align: center; }
+  .constellation-text.show { opacity: 1; }
+  
+  /* ============ 2. RAIN OF PHOTOS ============ */
+  .photo-rain { position: fixed; inset: 0; pointer-events: none; z-index: 100; overflow: hidden; }
+  .falling-photo { position: absolute; width: 100px; height: 120px; background: #fff; padding: 8px 8px 20px 8px; border-radius: 4px; box-shadow: 0 8px 25px rgba(0,0,0,0.4); animation: fallPhoto linear forwards; }
+  .falling-photo img { width: 100%; height: 100%; object-fit: cover; display: block; }
+  @keyframes fallPhoto { 
+    0% { transform: translateY(-150px) rotate(var(--startRot, 0deg)); }
+    100% { transform: translateY(110vh) rotate(var(--endRot, 15deg)); }
+  }
+  
+  /* ============ 3. HEART GAME ============ */
+  .game-overlay { position: fixed; inset: 0; z-index: 100; pointer-events: none; }
+  .game-overlay.active { pointer-events: auto; }
+  .game-counter { position: fixed; top: 20px; left: 50%; transform: translateX(-50%); background: rgba(255,111,165,0.95); color: #fff; padding: 12px 30px; border-radius: 30px; font-size: 20px; font-weight: bold; z-index: 200; box-shadow: 0 10px 30px rgba(0,0,0,0.4); }
+  .game-heart { position: absolute; font-size: 40px; cursor: pointer; animation: floatUp linear forwards; user-select: none; }
+  @keyframes floatUp {
+    0% { transform: translateY(110vh) scale(0.5); opacity: 0; }
+    10% { opacity: 1; }
+    90% { opacity: 1; }
+    100% { transform: translateY(-150px) scale(1); opacity: 0; }
+  }
+  .game-heart.popped { animation: popHeart 0.5s forwards; pointer-events: none; }
+  @keyframes popHeart {
+    0% { transform: scale(1); }
+    50% { transform: scale(1.8); }
+    100% { transform: scale(0); opacity: 0; }
+  }
+  .game-win { position: fixed; top: 50%; left: 50%; transform: translate(-50%, -50%) scale(0); background: linear-gradient(135deg, #ff6fa5, #ffd166); padding: 40px 50px; border-radius: 20px; text-align: center; z-index: 300; box-shadow: 0 20px 60px rgba(0,0,0,0.5); transition: transform 0.6s cubic-bezier(0.34, 1.56, 0.64, 1); }
+  .game-win.show { transform: translate(-50%, -50%) scale(1); }
+  .game-win h2 { font-size: 2rem; color: #fff; margin-bottom: 10px; }
+  .game-win p { color: #fff; font-size: 1.1rem; }
+  
+  /* ============ 4. FORTUNE COOKIE ============ */
+  .cookie-overlay { position: fixed; inset: 0; background: rgba(0,0,0,0.85); z-index: 100; display: none; align-items: center; justify-content: center; flex-direction: column; gap: 30px; }
+  .cookie-overlay.show { display: flex; }
+  .cookie { font-size: 120px; cursor: pointer; transition: transform 0.3s; user-select: none; filter: drop-shadow(0 10px 30px rgba(255,200,100,0.6)); }
+  .cookie:hover { transform: scale(1.1); }
+  .cookie.cracking { animation: crack 0.6s forwards; }
+  @keyframes crack {
+    0% { transform: scale(1) rotate(0deg); }
+    25% { transform: scale(1.2) rotate(-8deg); }
+    50% { transform: scale(1.3) rotate(8deg); }
+    75% { transform: scale(1.4) rotate(-4deg); }
+    100% { transform: scale(0) rotate(0deg); opacity: 0; }
+  }
+  .cookie-instruction { color: #ffd166; font-size: 18px; }
+  .fortune-paper { background: #fdf4e3; color: #5a3a44; padding: 30px 40px; border-radius: 8px; max-width: 400px; text-align: center; font-family: 'Dancing Script', cursive; font-size: 1.6rem; line-height: 1.5; box-shadow: 0 20px 60px rgba(0,0,0,0.5); opacity: 0; transform: translateY(30px); transition: 0.8s ease; }
+  .fortune-paper.show { opacity: 1; transform: translateY(0); }
+  .close-fortune { padding: 10px 25px; border-radius: 25px; border: 2px solid #fff; background: transparent; color: #fff; cursor: pointer; margin-top: 10px; opacity: 0; transition: opacity 0.5s 1s; }
+  .close-fortune.show { opacity: 1; }
+</style>
+</head>
+<body>
+
+<canvas id="starCanvas"></canvas>
+
+<div class="container">
+  <h1>🎁 Surprise Demos</h1>
+  <p class="subtitle">Tap each to preview. Refresh to reset.</p>
+  <div class="demo-buttons">
+    <button class="demo-btn" onclick="demo1_constellation()">1️⃣ Constellation Heart</button>
+    <button class="demo-btn" onclick="demo2_photoRain()">2️⃣ Photo Rain</button>
+    <button class="demo-btn" onclick="demo3_heartGame()">3️⃣ Heart Mini Game</button>
+    <button class="demo-btn" onclick="demo4_fortuneCookie()">4️⃣ Fortune Cookie</button>
+  </div>
+  <button class="reset-btn" onclick="location.reload()">🔄 Reset All</button>
+</div>
+
+<!-- Constellation text -->
+<div id="constellationText" class="constellation-text">KALU ❤️ GOJO</div>
+
+<!-- Photo rain container -->
+<div id="photoRain" class="photo-rain"></div>
+
+<!-- Heart game -->
+<div id="gameOverlay" class="game-overlay"></div>
+<div id="gameWin" class="game-win">
+  <h2>💕 You Win!</h2>
+  <p>You caught 10 hearts,<br>but you've had mine since day 1.</p>
+</div>
+
+<!-- Fortune cookie -->
+<div id="cookieOverlay" class="cookie-overlay">
+  <p class="cookie-instruction">Tap the cookie to crack it open ✨</p>
+  <div class="cookie" id="cookie" onclick="crackCookie()">🥠</div>
+  <div class="fortune-paper" id="fortunePaper">
+    You are loved beyond measure.<br>
+    Especially by Gojo. 💕
+  </div>
+  <button class="close-fortune" id="closeFortune" onclick="closeFortune()">Close</button>
+</div>
+
+<script>
+// ============ STARFIELD (Base) ============
+const canvas = document.getElementById('starCanvas');
+const ctx = canvas.getContext('2d');
+function resizeCanvas() { canvas.width = innerWidth; canvas.height = innerHeight; }
+resizeCanvas();
+window.addEventListener('resize', resizeCanvas);
+
+let stars = [];
+function initStars() {
+  stars = Array.from({length: 200}, () => ({
+    x: Math.random() * canvas.width,
+    y: Math.random() * canvas.height,
+    r: Math.random() * 1.5 + 0.3,
+    baseX: 0, baseY: 0,
+    targetX: 0, targetY: 0,
+    isHeart: false,
+    o: Math.random() * 10,
+    s: Math.random() * 0.02 + 0.005
+  }));
+  stars.forEach(st => { st.baseX = st.x; st.baseY = st.y; });
+}
+initStars();
+
+let animationMode = 'normal'; // 'normal' or 'constellation'
+let constellationProgress = 0;
+
+function drawStars() {
+  ctx.clearRect(0, 0, canvas.width, canvas.height);
+  
+  stars.forEach(st => {
+    if (animationMode === 'constellation' && st.isHeart) {
+      // Move toward target
+      st.x += (st.targetX - st.x) * 0.05;
+      st.y += (st.targetY - st.y) * 0.05;
+      ctx.beginPath();
+      ctx.arc(st.x, st.y, 2.5, 0, 7);
+      ctx.fillStyle = `rgba(255, 111, 165, 1)`;
+      ctx.shadowBlur = 15;
+      ctx.shadowColor = '#ff6fa5';
+      ctx.fill();
+      ctx.shadowBlur = 0;
+    } else {
+      st.o += st.s;
+      const op = Math.abs(Math.sin(st.o));
+      ctx.beginPath();
+      ctx.arc(st.x, st.y, st.r, 0, 7);
+      ctx.fillStyle = `rgba(255,255,255,${op})`;
+      ctx.fill();
+    }
+  });
+  requestAnimationFrame(drawStars);
+}
+drawStars();
+
+// ============ 1. CONSTELLATION HEART ============
+function demo1_constellation() {
+  // Reset first
+  animationMode = 'normal';
+  stars.forEach(st => { st.isHeart = false; st.x = st.baseX; st.y = st.baseY; });
+  document.getElementById('constellationText').classList.remove('show');
+  
+  setTimeout(() => {
+    // Generate heart shape coordinates
+    const heartPoints = [];
+    const centerX = canvas.width / 2;
+    const centerY = canvas.height / 2;
+    const scale = Math.min(canvas.width, canvas.height) * 0.015;
+    
+    for (let i = 0; i < 60; i++) {
+      const t = (i / 60) * Math.PI * 2;
+      const x = 16 * Math.pow(Math.sin(t), 3);
+      const y = -(13 * Math.cos(t) - 5 * Math.cos(2*t) - 2 * Math.cos(3*t) - Math.cos(4*t));
+      heartPoints.push({ x: centerX + x * scale, y: centerY + y * scale });
+    }
+    
+    // Assign stars to heart points
+    heartPoints.forEach((point, i) => {
+      if (stars[i]) {
+        stars[i].isHeart = true;
+        stars[i].targetX = point.x;
+        stars[i].targetY = point.y;
+      }
+    });
+    
+    animationMode = 'constellation';
+    
+    setTimeout(() => {
+      document.getElementById('constellationText').classList.add('show');
+    }, 500);
+  }, 100);
+}
+
+// ============ 2. PHOTO RAIN ============
+const samplePhotos = [
+  'https://res.cloudinary.com/khovkitp/image/upload/v1785420312/photo1_vnynfw.jpg',
+  'https://res.cloudinary.com/khovkitp/image/upload/v1785420313/photo2_tkwxy0.jpg',
+  'https://res.cloudinary.com/khovkitp/image/upload/v1785420313/photo3_weksao.jpg',
+  'https://res.cloudinary.com/khovkitp/image/upload/v1785420313/photo4_ygxigq.jpg',
+  'https://res.cloudinary.com/khovkitp/image/upload/v1785420307/dadar1_lmchyb.jpg',
+  'https://res.cloudinary.com/khovkitp/image/upload/v1785420308/dadar2_orhadi.jpg',
+  'https://res.cloudinary.com/khovkitp/image/upload/v1785420314/summer1_flyevb.jpg',
+  'https://res.cloudinary.com/khovkitp/image/upload/v1785420314/summer2_tjadr0.jpg',
+  'https://res.cloudinary.com/khovkitp/image/upload/v1785420314/summer3_jvqi4p.jpg',
+  'https://res.cloudinary.com/khovkitp/image/upload/v1785420314/summer4_xx6lri.jpg'
+];
+
+function demo2_photoRain() {
+  const container = document.getElementById('photoRain');
+  container.innerHTML = '';
+  
+  let count = 0;
+  const interval = setInterval(() => {
+    if (count >= 25) { clearInterval(interval); return; }
+    count++;
+    
+    const photo = document.createElement('div');
+    photo.className = 'falling-photo';
+    photo.style.left = (Math.random() * 90 + 5) + '%';
+    photo.style.animationDuration = (4 + Math.random() * 3) + 's';
+    photo.style.setProperty('--startRot', (Math.random() * 60 - 30) + 'deg');
+    photo.style.setProperty('--endRot', (Math.random() * 60 - 30) + 'deg');
+    
+    const img = document.createElement('img');
+    img.src = samplePhotos[Math.floor(Math.random() * samplePhotos.length)];
+    img.onerror = () => photo.remove();
+    photo.appendChild(img);
+    
+    container.appendChild(photo);
+    setTimeout(() => photo.remove(), 7000);
+  }, 200);
+}
+
+// ============ 3. HEART MINI GAME ============
+let gameActive = false;
+let heartsCaught = 0;
+let gameInterval = null;
+
+function demo3_heartGame() {
+  if (gameActive) return;
+  gameActive = true;
+  heartsCaught = 0;
+  
+  const overlay = document.getElementById('gameOverlay');
+  const winBox = document.getElementById('gameWin');
+  winBox.classList.remove('show');
+  overlay.innerHTML = '';
+  overlay.classList.add('active');
+  
+  // Counter
+  let counter = document.createElement('div');
+  counter.className = 'game-counter';
+  counter.id = 'gameCounter';
+  counter.textContent = '💕 Catch 10 hearts! (0/10)';
+  document.body.appendChild(counter);
+  
+  // Spawn hearts
+  gameInterval = setInterval(() => {
+    if (!gameActive) return;
+    const heart = document.createElement('div');
+    heart.className = 'game-heart';
+    heart.textContent = ['💗','💕','❤️','💖','💝'][Math.floor(Math.random()*5)];
+    heart.style.left = (Math.random() * 90 + 5) + '%';
+    heart.style.animationDuration = (3 + Math.random() * 2) + 's';
+    heart.style.fontSize = (30 + Math.random() * 25) + 'px';
+    
+    heart.addEventListener('click', () => {
+      if (heart.classList.contains('popped')) return;
+      heart.classList.add('popped');
+      heartsCaught++;
+      document.getElementById('gameCounter').textContent = `💕 Catch 10 hearts! (${heartsCaught}/10)`;
+      if (heartsCaught >= 10) endGame();
+    });
+    
+    overlay.appendChild(heart);
+    setTimeout(() => heart.remove(), 5000);
+  }, 500);
+}
+
+function endGame() {
+  gameActive = false;
+  clearInterval(gameInterval);
+  document.getElementById('gameCounter')?.remove();
+  document.getElementById('gameOverlay').classList.remove('active');
+  document.getElementById('gameOverlay').innerHTML = '';
+  document.getElementById('gameWin').classList.add('show');
+  setTimeout(() => document.getElementById('gameWin').classList.remove('show'), 5000);
+}
+
+// ============ 4. FORTUNE COOKIE ============
+function demo4_fortuneCookie() {
+  document.getElementById('cookieOverlay').classList.add('show');
+  document.getElementById('fortunePaper').classList.remove('show');
+  document.getElementById('closeFortune').classList.remove('show');
+  document.getElementById('cookie').classList.remove('cracking');
+  document.getElementById('cookie').style.display = 'block';
+}
+
+function crackCookie() {
+  const cookie = document.getElementById('cookie');
+  cookie.classList.add('cracking');
+  setTimeout(() => {
+    cookie.style.display = 'none';
+    document.getElementById('fortunePaper').classList.add('show');
+    document.getElementById('closeFortune').classList.add('show');
+  }, 600);
+}
+
+function closeFortune() {
+  document.getElementById('cookieOverlay').classList.remove('show');
+}
+</script>
+
+</body>
+</html>
