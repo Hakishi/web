@@ -2706,14 +2706,44 @@
     const canvas = document.getElementById('stars'), ctx = canvas.getContext('2d');
     function resize() { canvas.width = innerWidth; canvas.height = innerHeight; }
     resize(); window.addEventListener('resize', resize);
-    let stars = Array.from({ length: 150 }, () => ({ x: Math.random() * canvas.width, y: Math.random() * canvas.height, r: Math.random() * 1.4 + .3, s: Math.random() * .02 + .005, o: Math.random() * 10 }));
+    let stars = Array.from({ length: 100 }, () => ({ // Reduced from 150
+      x: Math.random() * canvas.width,
+      y: Math.random() * canvas.height,
+      r: Math.random() * 1.4 + .3,
+      s: Math.random() * .02 + .005,
+      o: Math.random() * 10
+    }));
+
+    let starsPaused = false;
+    let starAnimId = null;
+
     function animStars() {
+      if (starsPaused) return;
       ctx.clearRect(0, 0, canvas.width, canvas.height);
-      stars.forEach(st => { st.o += st.s; const op = Math.abs(Math.sin(st.o)); ctx.beginPath(); ctx.arc(st.x, st.y, st.r, 0, 7); ctx.fillStyle = `rgba(255,255,255,${op})`; ctx.fill(); });
-      requestAnimationFrame(animStars);
+      stars.forEach(st => {
+        st.o += st.s;
+        const op = Math.abs(Math.sin(st.o));
+        ctx.beginPath();
+        ctx.arc(st.x, st.y, st.r, 0, 7);
+        ctx.fillStyle = `rgba(255,255,255,${op})`;
+        ctx.fill();
+      });
+      starAnimId = requestAnimationFrame(animStars);
     }
     animStars();
 
+    // Pause stars when tab is hidden (huge battery saver)
+    document.addEventListener('visibilitychange', () => {
+      starsPaused = document.hidden;
+      if (!starsPaused && !starAnimId) animStars();
+    });
+
+    // Pause when constellation is fullscreen (redundant animation)
+    document.addEventListener('constellation-opened', () => { starsPaused = true; });
+    document.addEventListener('constellation-closed', () => {
+      starsPaused = false;
+      if (!starAnimId) animStars();
+    });
     /* ---------- Hero Floating Photos (20 sources) ---------- */
     const floatField = document.getElementById('floatingPhotoField');
     const heroPhotoSources = ['https://res.cloudinary.com/khovkitp/image/upload/v1785420307/floaty1_oxyvat.jpg', 'https://res.cloudinary.com/khovkitp/image/upload/v1785420307/floaty2_sy51j4.jpg', 'https://res.cloudinary.com/khovkitp/image/upload/v1785420308/floaty3_z5m609.jpg', 'https://res.cloudinary.com/khovkitp/image/upload/v1785420308/floaty4_cutppg.jpg', 'https://res.cloudinary.com/khovkitp/image/upload/v1785420308/floaty5_peeotg.jpg',
