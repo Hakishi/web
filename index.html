@@ -3,6 +3,8 @@
 
 <head>
   <meta charset="UTF-8">
+  <link rel="preconnect" href="https://res.cloudinary.com" crossorigin>
+  <link rel="dns-prefetch" href="https://res.cloudinary.com">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>For Kalu 🐾 — Happy Girlfriend Day</title>
   <link rel="preconnect" href="https://fonts.googleapis.com">
@@ -10,6 +12,17 @@
     href="https://fonts.googleapis.com/css2?family=Orbitron:wght@500;700;900&family=Poppins:wght@300;400;500;600;700&family=Dancing+Script:wght@600;700&family=Cormorant+Garamond:ital,wght@0,400;0,600;1,400&display=swap"
     rel="stylesheet">
   <style>
+    /* Smoother easing for all transitions */
+    * {
+      transition-timing-function: cubic-bezier(0.16, 1, 0.3, 1);
+    }
+
+    /* Prevent layout shift during animations */
+    img,
+    video {
+      aspect-ratio: attr(width) / attr(height);
+    }
+
     /* Fullscreen button */
     #fullscreenBtn {
       position: fixed;
@@ -71,6 +84,29 @@
     html {
       scroll-behavior: smooth;
       scroll-snap-type: y proximity;
+      -webkit-overflow-scrolling: touch;
+      /* iOS smooth momentum scroll */
+      scroll-padding-top: 0;
+      overscroll-behavior-y: contain;
+      /* Prevents pull-to-refresh interference */
+    }
+
+    /* Better touch handling on mobile */
+    body {
+      -webkit-tap-highlight-color: transparent;
+      touch-action: pan-y;
+    }
+
+    /* Smooth scroll for reduced motion users */
+    @media (prefers-reduced-motion: reduce) {
+      html {
+        scroll-behavior: auto;
+      }
+
+      * {
+        animation-duration: 0.01ms !important;
+        transition-duration: 0.01ms !important;
+      }
     }
 
     body {
@@ -301,7 +337,9 @@
       bottom: 78px;
       right: 20px;
       max-width: 190px;
-      background: rgba(255, 255, 255, .96);
+      background: rgba(255, 255, 255, .85);
+      backdrop-filter: blur(12px);
+      -webkit-backdrop-filter: blur(12px);
       color: #333;
       font-size: 11.5px;
       line-height: 1.5;
@@ -325,7 +363,9 @@
       top: 16px;
       left: 50%;
       transform: translateX(-50%) translateY(-10px);
-      background: rgba(255, 255, 255, .96);
+      background: rgba(255, 255, 255, .85);
+      backdrop-filter: blur(12px);
+      -webkit-backdrop-filter: blur(12px);
       color: #333;
       padding: 9px 20px;
       border-radius: 30px;
@@ -1370,7 +1410,9 @@
     .card-overlay {
       position: fixed;
       inset: 0;
-      background: rgba(10, 5, 20, .97);
+      background: rgba(10, 5, 20, .85);
+      backdrop-filter: blur(20px);
+      -webkit-backdrop-filter: blur(20px);
       display: flex;
       align-items: center;
       justify-content: center;
