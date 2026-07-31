@@ -32,6 +32,11 @@
       padding: 0;
     }
 
+    /* Hide fullscreen button when constellation is open */
+    body.constellation-open #fullscreenBtn {
+      display: none;
+    }
+
     #fullscreenBtn:hover {
       background: rgba(255, 255, 255, 0.15);
       border-color: rgba(255, 255, 255, 0.5);
