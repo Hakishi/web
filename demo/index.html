@@ -249,29 +249,30 @@ let lineFinished = false;
 
 function jitter(amount) { return (Math.random() - 0.5) * amount; }
 
-// MORE VARIED magnitudes — bigger differences
+// EVEN MORE size variety — from micro dots to prominent stars
 function realStarMagnitude() {
   const r = Math.random();
-  if (r < 0.55) return 0.7 + Math.random() * 0.4;   // 55% tiny stars (0.7-1.1)
-  if (r < 0.78) return 1.3 + Math.random() * 0.5;   // 23% small (1.3-1.8)
-  if (r < 0.92) return 2.0 + Math.random() * 0.8;   // 14% medium (2.0-2.8)
-  if (r < 0.985) return 3.0 + Math.random() * 1.0;  // 6.5% bright (3.0-4.0)
-  return 4.5 + Math.random() * 1.5;                  // 1.5% very bright (4.5-6.0)
+  if (r < 0.45) return 0.4 + Math.random() * 0.4;   // 45% MICRO stars (0.4-0.8)
+  if (r < 0.68) return 0.9 + Math.random() * 0.6;   // 23% tiny (0.9-1.5)
+  if (r < 0.83) return 1.6 + Math.random() * 0.7;   // 15% small (1.6-2.3)
+  if (r < 0.92) return 2.4 + Math.random() * 1.0;   // 9% medium (2.4-3.4)
+  if (r < 0.975) return 3.5 + Math.random() * 1.5;  // 5.5% bright (3.5-5.0)
+  return 5.5 + Math.random() * 2.5;                  // 2.5% very bright (5.5-8.0)
 }
 
-// REBALANCED colors — more blues, whites, silvers; fewer warm tones
+// MORE BLUE dominant palette
 function realStarColor() {
   const r = Math.random();
-  // Weighted toward cooler colors (like actual night sky - human eye sees mostly white/blue)
-  if (r < 0.30) return [245, 250, 255]; // 30% - White/Silver (dominant!)
-  if (r < 0.50) return [220, 232, 255]; // 20% - Blue-white (like Vega, Sirius)
-  if (r < 0.65) return [200, 215, 255]; // 15% - Cool blue
-  if (r < 0.75) return [255, 253, 240]; // 10% - Very pale yellow-white
-  if (r < 0.83) return [180, 200, 250]; // 8% - Pure blue (rare, hot)
-  if (r < 0.88) return [255, 248, 220]; // 5% - Warm white
-  if (r < 0.93) return [255, 235, 195]; // 5% - Soft orange
-  if (r < 0.97) return [255, 220, 180]; // 4% - Warm orange
-  return [255, 200, 170];                // 3% - Red-orange (Betelgeuse)
+  // Much more emphasis on blues and cool colors
+  if (r < 0.25) return [180, 205, 255]; // 25% - Rich blue (was rare, now common!)
+  if (r < 0.45) return [200, 220, 255]; // 20% - Blue-white
+  if (r < 0.60) return [220, 235, 255]; // 15% - Soft blue-white
+  if (r < 0.72) return [245, 250, 255]; // 12% - Pure white/silver
+  if (r < 0.82) return [160, 190, 250]; // 10% - Deep blue (rare, hot stars)
+  if (r < 0.88) return [255, 253, 240]; // 6% - Pale yellow-white
+  if (r < 0.92) return [255, 245, 220]; // 4% - Warm white
+  if (r < 0.96) return [255, 230, 190]; // 4% - Soft orange
+  return [255, 210, 180];               // 4% - Warm orange
 }
 
 function generateScintillation() {
@@ -284,16 +285,22 @@ function generateScintillation() {
     phase3: Math.random() * Math.PI * 2,
     popTimer: Math.random() * 100,
     popDuration: 0,
-    popIntensity: 0
+    popIntensity: 0,
+    // NEW: Deep twinkle timer (for full dark-to-bright cycle)
+    deepTwinkleTimer: Math.random() * 300 + 100,
+    deepTwinkleDuration: 0,
+    deepTwinkleValue: 0
   };
 }
 
+// FULL TWINKLE — stars can go completely dark then bright
 function getScintillationBrightness(scint, frameCount, baseIntensity = 0.25) {
   const wave1 = Math.sin(frameCount * scint.freq1 + scint.phase1);
   const wave2 = Math.sin(frameCount * scint.freq2 + scint.phase2) * 0.6;
   const wave3 = Math.sin(frameCount * scint.freq3 + scint.phase3) * 0.35;
   const combined = (wave1 + wave2 + wave3) / 1.95;
   
+  // Regular pops
   scint.popTimer--;
   if (scint.popTimer <= 0) {
     scint.popTimer = 60 + Math.random() * 150;
@@ -306,7 +313,27 @@ function getScintillationBrightness(scint, frameCount, baseIntensity = 0.25) {
     scint.popDuration--;
   }
   
-  return 1 - baseIntensity + baseIntensity * (combined * 0.5 + 0.5) + popEffect;
+  // DEEP TWINKLE — occasionally star goes completely dark then bright
+  scint.deepTwinkleTimer--;
+  if (scint.deepTwinkleTimer <= 0) {
+    scint.deepTwinkleTimer = 200 + Math.random() * 500; // Every 3-11 seconds
+    scint.deepTwinkleDuration = 30 + Math.random() * 20; // Duration of the deep twinkle
+  }
+  let deepEffect = 0;
+  if (scint.deepTwinkleDuration > 0) {
+    // Sinusoidal dip that goes to 0 (complete darkness) then bright
+    const progress = 1 - (scint.deepTwinkleDuration / 50);
+    const dip = Math.sin(progress * Math.PI); // 0 -> 1 -> 0
+    // First half: fade to dark, second half: brighten
+    if (progress < 0.5) {
+      deepEffect = -0.95 * (progress * 2); // Goes to almost 0 (fully dark)
+    } else {
+      deepEffect = -0.95 + 1.0 * ((progress - 0.5) * 2); // Comes back bright
+    }
+    scint.deepTwinkleDuration--;
+  }
+  
+  return Math.max(0, 1 - baseIntensity + baseIntensity * (combined * 0.5 + 0.5) + popEffect + deepEffect);
 }
 
 function layoutStars() {
@@ -325,7 +352,7 @@ function layoutStars() {
   
   const jitterFactor = 0.08 + Math.random() * 0.08;
   
-  // KALU
+  // KALU — constellation stars use realistic distribution now (blend in)
   const kaluWidth = 4 * letterWidth + 3 * spacing;
   const kaluStartX = centerX - kaluWidth / 2;
   const kaluY = centerY - letterHeight - 60;
@@ -338,14 +365,14 @@ function layoutStars() {
     const startIdx = kaluDotIndex;
     
     def.dots.forEach(([dx, dy]) => {
-      // Constellation stars are BIGGER and more varied than background
-      const magnitude = 1.8 + Math.random() * 2.5; // 1.8 - 4.3
+      // Use SAME magnitude distribution as background — blends in perfectly
+      const magnitude = realStarMagnitude();
       constellationDots.push({
         x: offsetX + dx * letterWidth + jitter(letterWidth * jitterFactor),
         y: kaluY + dy * letterHeight + jitter(letterHeight * jitterFactor),
         group: 'kalu', isRevealed: false, revealProgress: 0,
         magnitude: magnitude, color: realStarColor(),
-        baseBrightness: 0.75 + Math.random() * 0.25,
+        baseBrightness: 0.5 + Math.random() * 0.4, // Same as bg
         scint: generateScintillation()
       });
       kaluDotIndex++;
@@ -374,13 +401,13 @@ function layoutStars() {
     const startIdx = gojoDotIndex;
     
     def.dots.forEach(([dx, dy]) => {
-      const magnitude = 1.8 + Math.random() * 2.5;
+      const magnitude = realStarMagnitude();
       constellationDots.push({
         x: offsetX + dx * letterWidth + jitter(letterWidth * jitterFactor),
         y: gojoY + dy * letterHeight + jitter(letterHeight * jitterFactor),
         group: 'gojo', isRevealed: false, revealProgress: 0,
         magnitude: magnitude, color: realStarColor(),
-        baseBrightness: 0.75 + Math.random() * 0.25,
+        baseBrightness: 0.5 + Math.random() * 0.4,
         scint: generateScintillation()
       });
       gojoDotIndex++;
@@ -412,13 +439,13 @@ function layoutStars() {
     const t = (i / numHeartPoints) * Math.PI * 2;
     const hx = 16 * Math.pow(Math.sin(t), 3);
     const hy = -(13 * Math.cos(t) - 5 * Math.cos(2*t) - 2 * Math.cos(3*t) - Math.cos(4*t));
-    const magnitude = 1.8 + Math.random() * 2.5;
+    const magnitude = realStarMagnitude();
     constellationDots.push({
       x: heartCenterX + hx * scaleX + jitter(10),
       y: heartCenterY + hy * scaleY + jitter(10),
       group: 'heart', isRevealed: false, revealProgress: 0,
       magnitude: magnitude, color: realStarColor(),
-      baseBrightness: 0.75 + Math.random() * 0.25,
+      baseBrightness: 0.5 + Math.random() * 0.4,
       scint: generateScintillation()
     });
   }
@@ -512,6 +539,8 @@ setTimeout(spawnMeteor, 5000);
 let frameCount = 0;
 
 function drawStar(x, y, magnitude, color, brightness) {
+  if (brightness <= 0.02) return; // Skip drawing when nearly invisible
+  
   const [r, g, b] = color;
   const coreSize = magnitude * 0.5;
   
@@ -574,30 +603,31 @@ function draw() {
   frameCount++;
   ctx.clearRect(0, 0, canvas.width, canvas.height);
   
-  // Background stars
+  // Background stars — with FULL twinkling
   bgStars.forEach(st => {
-    const twinkleAmount = st.magnitude < 2 ? 0.35 : 0.2;
+    const twinkleAmount = st.magnitude < 2 ? 0.5 : 0.35; // MORE twinkle range
     const brightness = st.baseBrightness * getScintillationBrightness(st.scint, frameCount, twinkleAmount);
-    drawStar(st.x, st.y, st.magnitude, st.color, Math.max(0.1, brightness));
+    drawStar(st.x, st.y, st.magnitude, st.color, brightness);
   });
   
-  // Constellation dots — VISIBLE FROM START (looks pre-existing)
+  // Constellation dots — BLEND IN with background (indistinguishable until lit)
   constellationDots.forEach(dot => {
     if (dot.isRevealed) {
-      // Fully lit constellation star
+      // When line reaches: brighten dramatically to show it's part of constellation
       if (dot.revealProgress < 1) dot.revealProgress = Math.min(dot.revealProgress + 0.025, 1);
       const twinkleAmount = dot.magnitude < 2 ? 0.3 : 0.2;
-      const brightness = dot.baseBrightness * getScintillationBrightness(dot.scint, frameCount, twinkleAmount) * dot.revealProgress;
-      drawStar(dot.x, dot.y, dot.magnitude, dot.color, brightness);
+      // Boost brightness when revealed
+      const boostedBrightness = (dot.baseBrightness + 0.5) * getScintillationBrightness(dot.scint, frameCount, twinkleAmount) * dot.revealProgress;
+      drawStar(dot.x, dot.y, dot.magnitude * (1 + 0.5 * dot.revealProgress), dot.color, boostedBrightness);
     } else {
-      // Hidden state: MORE VISIBLE than before (already twinkling brightly like real stars)
-      const twinkleAmount = 0.3;
-      const brightness = 0.7 * getScintillationBrightness(dot.scint, frameCount, twinkleAmount); // Was 0.4, now 0.7
-      drawStar(dot.x, dot.y, dot.magnitude * 0.85, dot.color, brightness); // Was 0.6, now 0.85 size
+      // Hidden state: EXACTLY like background stars (blend in perfectly)
+      const twinkleAmount = dot.magnitude < 2 ? 0.5 : 0.35;
+      const brightness = dot.baseBrightness * getScintillationBrightness(dot.scint, frameCount, twinkleAmount);
+      drawStar(dot.x, dot.y, dot.magnitude, dot.color, brightness);
     }
   });
   
-  // Constellation lines — THIN AND ELEGANT
+  // Constellation lines
   constellationConnections.forEach(line => {
     if (line.progress > 0) {
       const dx = line.to.x - line.from.x;
@@ -605,10 +635,9 @@ function draw() {
       const currentX = line.from.x + dx * line.progress;
       const currentY = line.from.y + dy * line.progress;
       
-      // SLOWER sparkle (was 0.05, now 0.015) - much more subtle
       let sparkle = 1;
       if (line.progress >= 1 && lineFinished) {
-        sparkle = 0.85 + Math.sin(frameCount * 0.015 + line.sparkleOffset) * 0.15; // Reduced amplitude
+        sparkle = 0.85 + Math.sin(frameCount * 0.015 + line.sparkleOffset) * 0.15;
       }
       
       ctx.beginPath();
@@ -621,7 +650,6 @@ function draw() {
       ctx.stroke();
       ctx.shadowBlur = 0;
       
-      // MUCH LESS FREQUENT random sparkles (was 0.02, now 0.005)
       if (line.progress >= 1 && lineFinished && Math.random() < 0.005) {
         const sparklePos = Math.random();
         const spX = line.from.x + dx * sparklePos;
@@ -636,7 +664,7 @@ function draw() {
     }
   });
   
-  // Head trails (falling star effect behind traveling head)
+  // Head trails
   for (let i = headTrails.length - 1; i >= 0; i--) {
     const t = headTrails[i];
     t.life -= 0.04;
@@ -655,7 +683,7 @@ function draw() {
     ctx.fill();
   }
   
-  // Traveling head with bright meteor-like glow
+  // Traveling head
   constellationConnections.forEach(line => {
     if (line.progress > 0 && line.progress < 1) {
       const dx = line.to.x - line.from.x;
