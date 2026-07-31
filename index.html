@@ -4152,9 +4152,15 @@ Happy Girlfriend Day, mentosss. I love you — ass tujhi and all. 😄❤️`;
       });
     })();
 
-    /* ============ BURNING NOTE ANIMATION (NATURAL & SLOW) ============ */
+    /* ============ REALISTIC NOTE BURNING ANIMATION ============ */
     (function () {
       let burnStarted = false;
+
+      function noise(x, y, t) {
+        return Math.sin(x * 0.05 + t) * Math.cos(y * 0.05 - t * 0.7) +
+          Math.sin(x * 0.1 + t * 1.3) * 0.5 +
+          Math.cos(y * 0.08 + t * 0.9) * 0.3;
+      }
 
       function startBurning() {
         if (burnStarted) return;
@@ -4163,172 +4169,241 @@ Happy Girlfriend Day, mentosss. I love you — ass tujhi and all. 😄❤️`;
         const messageBox = document.getElementById('secretMessage');
         if (!messageBox) return;
 
+        const w = messageBox.offsetWidth;
+        const h = messageBox.offsetHeight;
+
         const canvas = document.createElement('canvas');
         canvas.className = 'burn-canvas';
-        canvas.width = messageBox.offsetWidth;
-        canvas.height = messageBox.offsetHeight;
+        canvas.width = w;
+        canvas.height = h;
         messageBox.appendChild(canvas);
-
         const ctx = canvas.getContext('2d');
-        const w = canvas.width;
-        const h = canvas.height;
+
+        const smokeCanvas = document.createElement('canvas');
+        smokeCanvas.style.cssText = `
+      position: absolute;
+      top: -${h}px;
+      left: 0;
+      width: ${w}px;
+      height: ${h * 2}px;
+      pointer-events: none;
+      z-index: 11;
+    `;
+        smokeCanvas.width = w;
+        smokeCanvas.height = h * 2;
+        messageBox.appendChild(smokeCanvas);
+        const smokeCtx = smokeCanvas.getContext('2d');
 
         setTimeout(() => canvas.classList.add('active'), 100);
 
-        // Natural burn - takes 15 seconds for full burn
-        const burnDuration = 15000;
+        const burnDuration = 18000;
         const startTime = performance.now();
         const embers = [];
-        const flameParticles = [];
-
-        // Multi-front burn with organic edges
-        // Each "burn point" spreads outward like real fire
-        const burnPoints = [];
-        // Start with 3 burn origins near top-left for organic look
-        burnPoints.push({ x: 0, y: 0, radius: 0, spreadRate: 1 });
-        burnPoints.push({ x: 30, y: 15, radius: 0, spreadRate: 0.9 });
-        burnPoints.push({ x: 10, y: 40, radius: 0, spreadRate: 0.95 });
+        const smokeParticles = [];
 
         function drawBurn(now) {
           const elapsed = now - startTime;
           const progress = Math.min(elapsed / burnDuration, 1);
+          const t = elapsed / 1000;
 
           ctx.clearRect(0, 0, w, h);
+          smokeCtx.clearRect(0, 0, w, h * 2);
 
-          // Grow all burn points
-          const maxRadius = Math.hypot(w, h) * 1.3;
-          burnPoints.forEach(bp => {
-            bp.radius = progress * maxRadius * bp.spreadRate;
-          });
+          const maxDist = Math.hypot(w, h);
+          const burnFrontDist = progress * maxDist * 1.15;
 
-          // Occasionally add new burn points near existing ones (spreading fire)
-          if (progress < 0.7 && Math.random() < 0.03 && burnPoints.length < 8) {
-            const parent = burnPoints[Math.floor(Math.random() * burnPoints.length)];
-            const angle = Math.random() * Math.PI * 2;
-            const dist = parent.radius * 0.7;
-            burnPoints.push({
-              x: parent.x + Math.cos(angle) * dist,
-              y: parent.y + Math.sin(angle) * dist,
-              radius: 0,
-              spreadRate: 0.6 + Math.random() * 0.4
-            });
-          }
+          const imageData = ctx.createImageData(w, h);
+          const data = imageData.data;
 
-          // Draw burn areas using composite operation for natural blending
-          ctx.save();
+          const step = 2;
+          for (let y = 0; y < h; y += step) {
+            for (let x = 0; x < w; x += step) {
+              const noiseVal = noise(x, y, t * 0.3) * 25;
+              const dist = Math.hypot(x, y) + noiseVal;
+              const distFromFront = burnFrontDist - dist;
 
-          // Layer 1: Deep black burned area
-          burnPoints.forEach(bp => {
-            const grad = ctx.createRadialGradient(bp.x, bp.y, 0, bp.x, bp.y, bp.radius);
-            grad.addColorStop(0, 'rgba(0, 0, 0, 0.98)');
-            grad.addColorStop(0.7, 'rgba(0, 0, 0, 0.95)');
-            grad.addColorStop(0.88, 'rgba(15, 8, 3, 0.9)');
-            grad.addColorStop(0.94, 'rgba(60, 25, 8, 0.75)');
-            grad.addColorStop(0.98, 'rgba(180, 60, 15, 0.5)');
-            grad.addColorStop(1, 'rgba(255, 120, 30, 0)');
-            ctx.fillStyle = grad;
-            ctx.beginPath();
-            ctx.arc(bp.x, bp.y, bp.radius, 0, Math.PI * 2);
-            ctx.fill();
-          });
+              let r = 0, g = 0, b = 0, a = 0;
 
-          // Layer 2: Add jagged/organic edge effect using noise
-          burnPoints.forEach(bp => {
-            if (bp.radius > 5) {
-              const numSpikes = 30;
-              for (let i = 0; i < numSpikes; i++) {
-                const angle = (i / numSpikes) * Math.PI * 2 + Math.sin(now * 0.001 + i) * 0.2;
-                const spikeR = bp.radius * (0.92 + Math.random() * 0.15);
-                const x = bp.x + Math.cos(angle) * spikeR;
-                const y = bp.y + Math.sin(angle) * spikeR;
+              if (distFromFront > 20) {
+                const charNoise = noise(x * 0.5, y * 0.5, t * 0.1);
+                const darkness = 15 + charNoise * 8;
+                r = darkness;
+                g = darkness * 0.6;
+                b = darkness * 0.3;
+                a = 255;
+              } else if (distFromFront > 5) {
+                const charProgress = (distFromFront - 5) / 15;
+                r = 40 * (1 - charProgress) + 15 * charProgress;
+                g = 20 * (1 - charProgress) + 9 * charProgress;
+                b = 10 * (1 - charProgress) + 5 * charProgress;
+                a = 255;
+              } else if (distFromFront > -8) {
+                const emberProgress = (distFromFront + 8) / 13;
+                const flicker = 0.85 + Math.sin(t * 10 + x * 0.5 + y * 0.3) * 0.15;
+                r = (255 - 100 * (1 - emberProgress)) * flicker;
+                g = (80 + 100 * emberProgress) * flicker;
+                b = (20 + 30 * emberProgress) * flicker;
+                a = 240;
+              } else if (distFromFront > -25) {
+                const flameProgress = (distFromFront + 25) / 17;
+                const flicker = 0.7 + Math.sin(t * 15 + x * 0.4 + y * 0.6) * 0.3;
+                r = (255) * flicker;
+                g = (180 + 60 * flameProgress) * flicker;
+                b = (60 * flameProgress) * flicker;
+                a = 180 * flicker;
+              } else if (distFromFront > -50) {
+                const heatProgress = (distFromFront + 50) / 25;
+                r = 60 * heatProgress;
+                g = 30 * heatProgress;
+                b = 10 * heatProgress;
+                a = 40 * heatProgress;
+              }
 
-                if (x >= 0 && x <= w && y >= 0 && y <= h) {
-                  // Flickering flame edge
-                  const flameSize = 8 + Math.random() * 8;
-                  const flameGrad = ctx.createRadialGradient(x, y, 0, x, y, flameSize);
-                  flameGrad.addColorStop(0, `rgba(255, ${180 + Math.random() * 60}, 60, ${0.4 + Math.random() * 0.3})`);
-                  flameGrad.addColorStop(0.4, `rgba(255, 100, 20, ${0.3 + Math.random() * 0.2})`);
-                  flameGrad.addColorStop(1, 'rgba(180, 40, 10, 0)');
-                  ctx.fillStyle = flameGrad;
-                  ctx.beginPath();
-                  ctx.arc(x, y, flameSize, 0, Math.PI * 2);
-                  ctx.fill();
-
-                  // Small bright flame tips
-                  if (Math.random() < 0.3) {
-                    ctx.fillStyle = `rgba(255, 240, 180, ${0.6})`;
-                    ctx.beginPath();
-                    ctx.arc(x, y, 1.5, 0, Math.PI * 2);
-                    ctx.fill();
-                  }
+              for (let dy = 0; dy < step && y + dy < h; dy++) {
+                for (let dx = 0; dx < step && x + dx < w; dx++) {
+                  const idx = ((y + dy) * w + (x + dx)) * 4;
+                  data[idx] = r;
+                  data[idx + 1] = g;
+                  data[idx + 2] = b;
+                  data[idx + 3] = a;
                 }
               }
             }
-          });
+          }
+          ctx.putImageData(imageData, 0, 0);
 
-          ctx.restore();
+          ctx.globalCompositeOperation = 'screen';
+          for (let i = 0; i < 40; i++) {
+            const angle = Math.random() * Math.PI / 2;
+            const frontR = burnFrontDist * (0.85 + Math.random() * 0.15);
+            const fx = Math.cos(angle) * frontR + noise(i, t, t * 0.5) * 20;
+            const fy = Math.sin(angle) * frontR + noise(i * 2, t, t * 0.5) * 20;
 
-          // Emit embers rising up from burn edges
-          if (progress < 0.9 && Math.random() < 0.6) {
-            burnPoints.forEach(bp => {
-              if (Math.random() < 0.3) {
-                const angle = Math.random() * Math.PI * 2;
-                const r = bp.radius * 0.95;
-                const ex = bp.x + Math.cos(angle) * r;
-                const ey = bp.y + Math.sin(angle) * r;
-                if (ex >= -20 && ex <= w + 20 && ey >= -20 && ey <= h + 20) {
-                  embers.push({
-                    x: ex, y: ey,
-                    vx: (Math.random() - 0.5) * 1.5,
-                    vy: -Math.random() * 2 - 0.5,
-                    life: 1,
-                    size: 0.8 + Math.random() * 1.8,
-                    color: [255, 100 + Math.random() * 100, 20 + Math.random() * 40]
-                  });
-                }
+            if (fx >= 0 && fx <= w && fy >= 0 && fy <= h) {
+              const flameSize = 15 + Math.random() * 20;
+              const flameGrad = ctx.createRadialGradient(fx, fy, 0, fx, fy, flameSize);
+              const intensity = 0.4 + Math.random() * 0.4;
+              flameGrad.addColorStop(0, `rgba(255, 230, 150, ${intensity})`);
+              flameGrad.addColorStop(0.3, `rgba(255, 150, 40, ${intensity * 0.6})`);
+              flameGrad.addColorStop(0.7, `rgba(200, 60, 15, ${intensity * 0.3})`);
+              flameGrad.addColorStop(1, 'rgba(150, 30, 10, 0)');
+              ctx.fillStyle = flameGrad;
+              ctx.beginPath();
+              ctx.arc(fx, fy, flameSize, 0, Math.PI * 2);
+              ctx.fill();
+            }
+          }
+          ctx.globalCompositeOperation = 'source-over';
+
+          if (progress < 0.95 && Math.random() < 0.8) {
+            for (let i = 0; i < 3; i++) {
+              const angle = Math.random() * Math.PI / 2;
+              const r = burnFrontDist * (0.85 + Math.random() * 0.1);
+              const ex = Math.cos(angle) * r;
+              const ey = Math.sin(angle) * r;
+              if (ex >= 0 && ex <= w && ey >= 0 && ey <= h) {
+                embers.push({
+                  x: ex, y: ey,
+                  vx: (Math.random() - 0.5) * 2 + 0.5,
+                  vy: -Math.random() * 3 - 1,
+                  life: 1,
+                  maxLife: 0.8 + Math.random() * 0.6,
+                  size: 0.5 + Math.random() * 2,
+                  temperature: 0.7 + Math.random() * 0.3
+                });
               }
-            });
+            }
           }
 
-          // Draw & update embers
+          if (progress > 0.05 && progress < 0.95 && Math.random() < 0.5) {
+            for (let i = 0; i < 2; i++) {
+              const angle = Math.random() * Math.PI / 2;
+              const r = burnFrontDist * (0.6 + Math.random() * 0.3);
+              smokeParticles.push({
+                x: Math.cos(angle) * r,
+                y: Math.sin(angle) * r + h,
+                vx: (Math.random() - 0.3) * 0.5,
+                vy: -Math.random() * 1.5 - 0.5,
+                life: 1,
+                size: 20 + Math.random() * 30,
+                growth: 0.3 + Math.random() * 0.4,
+                opacity: 0.15 + Math.random() * 0.15,
+                rotation: Math.random() * Math.PI * 2,
+                rotSpeed: (Math.random() - 0.5) * 0.02
+              });
+            }
+          }
+
           for (let i = embers.length - 1; i >= 0; i--) {
             const e = embers[i];
-            e.life -= 0.015;
+            e.life -= 0.012;
             e.x += e.vx;
             e.y += e.vy;
-            e.vy += 0.03;
-            e.vx += (Math.random() - 0.5) * 0.1; // Slight drift
+            e.vy += 0.04;
+            e.vx += (Math.random() - 0.5) * 0.15;
+
             if (e.life <= 0) { embers.splice(i, 1); continue; }
 
-            // Ember glow
-            const glowGrad = ctx.createRadialGradient(e.x, e.y, 0, e.x, e.y, 6);
-            glowGrad.addColorStop(0, `rgba(255, 200, 80, ${e.life * 0.7})`);
-            glowGrad.addColorStop(0.5, `rgba(255, ${e.color[1]}, ${e.color[2]}, ${e.life * 0.4})`);
-            glowGrad.addColorStop(1, 'rgba(255, 100, 20, 0)');
+            const rC = 255;
+            const gC = 100 + e.temperature * 155 * e.life;
+            const bC = 20 + e.temperature * 40 * e.life;
+
+            const glowGrad = ctx.createRadialGradient(e.x, e.y, 0, e.x, e.y, e.size * 3);
+            glowGrad.addColorStop(0, `rgba(255, 220, 150, ${e.life * 0.6})`);
+            glowGrad.addColorStop(0.5, `rgba(${rC}, ${gC}, ${bC}, ${e.life * 0.3})`);
+            glowGrad.addColorStop(1, `rgba(200, 60, 20, 0)`);
             ctx.fillStyle = glowGrad;
             ctx.beginPath();
-            ctx.arc(e.x, e.y, 6, 0, Math.PI * 2);
+            ctx.arc(e.x, e.y, e.size * 3, 0, Math.PI * 2);
             ctx.fill();
 
-            // Ember core
-            ctx.fillStyle = `rgba(255, ${180 + Math.random() * 60}, ${e.color[2]}, ${e.life * 0.9})`;
+            ctx.fillStyle = `rgba(${rC}, ${gC}, ${bC}, ${e.life * 0.95})`;
             ctx.beginPath();
             ctx.arc(e.x, e.y, e.size * e.life, 0, Math.PI * 2);
             ctx.fill();
           }
 
-          // Progressively darken the actual note underneath
-          messageBox.style.filter = `brightness(${1 - progress * 0.8}) contrast(${1 + progress * 0.3})`;
+          for (let i = smokeParticles.length - 1; i >= 0; i--) {
+            const s = smokeParticles[i];
+            s.life -= 0.005;
+            s.x += s.vx;
+            s.y += s.vy;
+            s.vy -= 0.005;
+            s.size += s.growth;
+            s.rotation += s.rotSpeed;
 
-          if (progress < 1 || embers.length > 0) {
+            if (s.life <= 0 || s.y < -100) { smokeParticles.splice(i, 1); continue; }
+
+            smokeCtx.save();
+            smokeCtx.translate(s.x, s.y);
+            smokeCtx.rotate(s.rotation);
+
+            const smokeGrad = smokeCtx.createRadialGradient(0, 0, 0, 0, 0, s.size);
+            const grayValue = 60 + (1 - s.life) * 40;
+            smokeGrad.addColorStop(0, `rgba(${grayValue}, ${grayValue}, ${grayValue}, ${s.opacity * s.life})`);
+            smokeGrad.addColorStop(0.6, `rgba(${grayValue * 0.7}, ${grayValue * 0.7}, ${grayValue * 0.7}, ${s.opacity * s.life * 0.5})`);
+            smokeGrad.addColorStop(1, 'rgba(30, 30, 30, 0)');
+            smokeCtx.fillStyle = smokeGrad;
+            smokeCtx.beginPath();
+            smokeCtx.arc(0, 0, s.size, 0, Math.PI * 2);
+            smokeCtx.fill();
+
+            smokeCtx.restore();
+          }
+
+          const shrinkAmount = progress * 0.05;
+          messageBox.style.filter = `brightness(${1 - progress * 0.85}) contrast(${1 + progress * 0.4})`;
+          messageBox.style.transform = `scale(${1 - shrinkAmount})`;
+          messageBox.style.transformOrigin = 'top left';
+
+          if (progress < 1 || embers.length > 0 || smokeParticles.length > 0) {
             requestAnimationFrame(drawBurn);
           } else {
-            // Burn complete - fade out and TRIGGER FINAL CONSTELLATION
             setTimeout(() => {
-              messageBox.style.transition = 'opacity 2s ease';
+              messageBox.style.transition = 'opacity 2s ease, transform 2s ease';
               messageBox.style.opacity = '0';
+              messageBox.style.transform = `scale(0.7) rotate(-2deg)`;
 
-              // Fade out everything except header
               const secretSection = document.getElementById('secret');
               if (secretSection) {
                 const sectionInner = secretSection.querySelector('.section-inner');
@@ -4338,23 +4413,13 @@ Happy Girlfriend Day, mentosss. I love you — ass tujhi and all. 😄❤️`;
                 }
               }
 
-              // After fade out, show final constellation as BACKGROUND
               setTimeout(() => {
                 if (typeof window.reopenConstellationPermanent === 'function') {
-                  // First: mark body as permanent constellation mode
-                  document.body.classList.add('constellation-permanent');
                   document.body.classList.remove('constellation-open');
                   document.body.style.top = '';
                   document.body.style.position = '';
                   document.body.style.overflow = '';
-
-                  // Show the constellation as background
                   window.reopenConstellationPermanent();
-
-                  // Wait a moment, then show hint
-                  setTimeout(() => {
-                    showFinalHint();
-                  }, 3000);
                 }
               }, 3500);
             }, 500);
@@ -4363,58 +4428,6 @@ Happy Girlfriend Day, mentosss. I love you — ass tujhi and all. 😄❤️`;
         requestAnimationFrame(drawBurn);
       }
 
-      function showFinalHint() {
-        const hint = document.createElement('div');
-        hint.style.cssText = `
-      position: fixed;
-      bottom: 30px;
-      left: 50%;
-      transform: translateX(-50%);
-      color: rgba(220, 230, 255, 0.7);
-      font-family: 'Cormorant Garamond', serif;
-      font-style: italic;
-      font-size: 15px;
-      letter-spacing: 3px;
-      z-index: 10000;
-      opacity: 0;
-      transition: opacity 2s ease;
-      pointer-events: none;
-      text-align: center;
-      text-shadow: 0 0 10px rgba(0, 0, 0, 0.8);
-    `;
-        hint.innerHTML = '↑ Scroll up to revisit our story ↑';
-        document.body.appendChild(hint);
-
-        setTimeout(() => hint.style.opacity = '1', 100);
-        setTimeout(() => hint.style.opacity = '0', 10000);
-        setTimeout(() => hint.remove(), 13000);
-
-        // Also add a subtle indicator that keeps flashing occasionally
-        setInterval(() => {
-          const flash = document.createElement('div');
-          flash.style.cssText = `
-        position: fixed;
-        bottom: 20px;
-        left: 50%;
-        transform: translateX(-50%);
-        color: rgba(220, 230, 255, 0.3);
-        font-family: 'Poppins', sans-serif;
-        font-size: 20px;
-        z-index: 9999;
-        opacity: 0;
-        transition: opacity 1.5s ease;
-        pointer-events: none;
-        animation: bounceHint 2s ease infinite;
-      `;
-          flash.innerHTML = '↑';
-          document.body.appendChild(flash);
-          setTimeout(() => flash.style.opacity = '1', 100);
-          setTimeout(() => flash.style.opacity = '0', 4000);
-          setTimeout(() => flash.remove(), 5500);
-        }, 30000); // Every 30 seconds, subtle reminder
-      }
-
-      // Watch for the secret message to become visible
       const checkInterval = setInterval(() => {
         const msg = document.getElementById('secretMessage');
         if (msg && msg.classList.contains('show')) {
@@ -4423,13 +4436,14 @@ Happy Girlfriend Day, mentosss. I love you — ass tujhi and all. 😄❤️`;
           const totalTypewriterTime = textLength * typewriterSpeed;
 
           setTimeout(() => {
-            setTimeout(startBurning, 7000);
+            setTimeout(startBurning, 5000);
           }, totalTypewriterTime);
 
           clearInterval(checkInterval);
         }
       }, 500);
     })();
+
   </script>
   <script>
     const startTime = Date.now();
