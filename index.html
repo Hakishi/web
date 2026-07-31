@@ -3271,8 +3271,16 @@ Happy Girlfriend Day, Kalu. I love you.`;
         card.style.transform = `translate(-50%,-50%) translateX(${offset * 230}px) scale(${offset === 0 ? 1 : 0.75}) rotateY(${offset * -25}deg)`;
         card.style.zIndex = 10 - Math.abs(offset);
         card.style.opacity = Math.abs(offset) > 2 ? 0 : 1;
+
         if (card._videoNode) {
-          if (offset === 0) { card._videoNode.play().catch(() => { }); } else { card._videoNode.pause(); }
+          if (offset === 0) {
+            // Play video only if gallery is visible
+            if (galleryVisible) {
+              card._videoNode.play().catch(() => { });
+            }
+          } else {
+            card._videoNode.pause();
+          }
         }
       });
     }
@@ -3297,13 +3305,28 @@ Happy Girlfriend Day, Kalu. I love you.`;
     }
 
     // Only auto-rotate when gallery section is visible
+    let galleryVisible = false;
+
     new IntersectionObserver((entries) => {
       entries.forEach(entry => {
         if (entry.isIntersecting) {
-          startAutoRotate();
+          galleryVisible = true;
+
+          // Delay auto-rotate start to give user time to view current card
+          setTimeout(() => {
+            if (galleryVisible) startAutoRotate();
+          }, 2000);
+
+          // Resume video of current active card
+          const activeCard = cards[active];
+          if (activeCard && activeCard._videoNode) {
+            activeCard._videoNode.play().catch(() => { });
+          }
         } else {
+          galleryVisible = false;
           stopAutoRotate();
-          // Pause all carousel videos when gallery not visible
+
+          // Pause all carousel videos
           cards.forEach(card => {
             if (card._videoNode) {
               card._videoNode.pause();
