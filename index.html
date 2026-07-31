@@ -2051,6 +2051,34 @@
     body.letter-typing {
       scroll-snap-type: none !important;
     }
+
+    /* Performance optimizations for animated elements */
+    .floating-photo,
+    .fh,
+    .cursor-heart,
+    .click-sparkle,
+    #customCursor,
+    .hand,
+    .hand-particle,
+    .paw {
+      will-change: transform, opacity;
+    }
+
+    /* Enable GPU acceleration on transforms */
+    .section,
+    .chat-bubble,
+    .photo-frame,
+    .reveal {
+      transform: translateZ(0);
+    }
+
+    /* Reduce paint area for fixed elements */
+    #stars,
+    #musicToggle,
+    #scrollProgress,
+    .dot-nav {
+      contain: layout style paint;
+    }
   </style>
 </head>
 
@@ -2343,7 +2371,8 @@
 
     <div class="card-overlay" id="cardOverlay">
       <button class="close-card" id="closeCardBtn">✕</button>
-      <img src="https://res.cloudinary.com/khovkitp/image/upload/f_auto,q_auto,w_800/v1785420312/gift-card_lyfiva.jpg" alt="Birthday Card"
+      <img src="https://res.cloudinary.com/khovkitp/image/upload/f_auto,q_auto,w_800/v1785420312/gift-card_lyfiva.jpg"
+        alt="Birthday Card"
         onerror="this.onerror=null;this.style.display='none';this.insertAdjacentHTML('afterend','<p class=\'placeholder-text\'>💌 (landscape)</p>')">
     </div>
   </section>
