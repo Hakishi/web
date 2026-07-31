@@ -1523,7 +1523,9 @@
 
     .letter-box {
       max-width: 600px;
-      min-height: 500px;
+      min-height: 550px;
+      height: 550px;
+      /* FIXED height - won't grow */
       background: #fffaf5;
       color: #5a3a44;
       padding: 40px 30px;
@@ -1532,7 +1534,7 @@
       position: relative;
       display: flex;
       flex-direction: column;
-      justify-content: space-between;
+      overflow: hidden;
     }
 
     .letter-box::before {
@@ -1544,39 +1546,13 @@
       pointer-events: none;
     }
 
-    /* Fix love letter section layout jump */
-    #loveletter {
-      min-height: 100vh;
-      padding: 100px 20px;
-    }
-
-    #loveletter .section-inner {
-      min-height: 600px;
-      justify-content: center;
-    }
-
-    #loveletter #letterText {
-      min-height: 380px;
-      white-space: pre-wrap;
-    }
-
-    @media (max-width: 600px) {
-      .letter-box {
-        min-height: 600px;
-        padding: 26px 18px;
-      }
-
-      #loveletter #letterText {
-        min-height: 480px;
-        font-size: 14px;
-      }
-    }
-
     #letterText {
       font-size: 15.5px;
       line-height: 1.9;
       white-space: pre-wrap;
       text-align: left;
+      flex: 1;
+      overflow: hidden;
     }
 
     .signature {
@@ -1585,6 +1561,12 @@
       font-size: 1.6rem;
       color: var(--romance1);
       text-align: right;
+      opacity: 0;
+      transition: opacity 1.5s ease;
+    }
+
+    .signature.show {
+      opacity: 1;
     }
 
     #finale h2 {
@@ -2058,6 +2040,22 @@
     .burn-canvas.active {
       opacity: 1;
     }
+
+    /* Prevent section snap issues during letter typing */
+    #loveletter {
+      scroll-snap-align: none !important;
+      min-height: 100vh;
+    }
+
+    #loveletter .section-inner {
+      min-height: 700px;
+      justify-content: center;
+    }
+
+    /* Ensure smooth typing without layout shift */
+    body.letter-typing {
+      scroll-snap-type: none !important;
+    }
   </style>
 </head>
 
@@ -2124,19 +2122,19 @@
   </section>
 
   <!-- 2. MATCH FOUND -->
-  <section id="match" class="section dark-section" data-bg-img="images/bg-match.jpg">
+  <section id="match" class="section dark-section" data-bg-img="">
     <div class="section-inner">
       <p class="tag reveal">🎮 26TH NOVEMBER 2025 • 7:52 PM</p>
       <h2 class="stamp reveal">MATCH FOUND</h2>
       <div class="vs-row reveal">
         <div class="photo-frame"><img
             src="https://res.cloudinary.com/khovkitp/image/upload/v1785420312/photo1_vnynfw.jpg"
-            onerror="this.onerror=null;this.style.display='none';this.insertAdjacentHTML('afterend','<span>📷 images/photo1.jpg</span>')">
+            onerror="this.onerror=null;this.style.display='none';this.insertAdjacentHTML('afterend','<span>📷 </span>')">
         </div>
         <span class="vs-icon">💥</span>
         <div class="photo-frame"><img
             src="https://res.cloudinary.com/khovkitp/image/upload/v1785420313/photo2_tkwxy0.jpg"
-            onerror="this.onerror=null;this.style.display='none';this.insertAdjacentHTML('afterend','<span>📷 images/photo2.jpg</span>')">
+            onerror="this.onerror=null;this.style.display='none';this.insertAdjacentHTML('afterend','<span>📷 </span>')">
         </div>
       </div>
       <p class="desc reveal">Two random players dropped into the same lobby. Neither of us knew this match would change
@@ -2145,7 +2143,7 @@
   </section>
 
   <!-- 3. CHAPTER 1 -->
-  <section id="chapter1" class="section dark-section" data-bg-img="images/bg-chapter1.jpg">
+  <section id="chapter1" class="section dark-section" data-bg-img="">
     <div class="section-inner">
       <p class="tag reveal">CHAPTER ONE</p>
       <h2 class="reveal">We Just Kept Talking</h2>
@@ -2158,11 +2156,11 @@
       <div class="gallery-row reveal">
         <div class="photo-frame"><img
             src="https://res.cloudinary.com/khovkitp/image/upload/v1785420313/photo3_weksao.jpg"
-            onerror="this.onerror=null;this.style.display='none';this.insertAdjacentHTML('afterend','<span>📷 images/photo3.jpg</span>')">
+            onerror="this.onerror=null;this.style.display='none';this.insertAdjacentHTML('afterend','<span>📷</span>')">
         </div>
         <div class="photo-frame"><img
             src="https://res.cloudinary.com/khovkitp/image/upload/v1785420313/photo4_ygxigq.jpg"
-            onerror="this.onerror=null;this.style.display='none';this.insertAdjacentHTML('afterend','<span>📷 images/photo4.jpg</span>')">
+            onerror="this.onerror=null;this.style.display='none';this.insertAdjacentHTML('afterend','<span>📷 </span>')">
         </div>
       </div>
       <p class="desc reveal">A random question turned into a full conversation — and that conversation never really
@@ -2196,7 +2194,7 @@
   </section>
 
   <!-- 5. CHAPTER 2 - SILENCE -->
-  <section id="chapter2" class="section silence-section" data-bg-img="images/bg-silence.jpg">
+  <section id="chapter2" class="section silence-section" data-bg-img="">
     <div class="section-inner">
       <p class="tag reveal" style="color:#ccc;">CHAPTER TWO</p>
       <h2 class="reveal">The Silence</h2>
@@ -2237,7 +2235,7 @@
   </section>
 
   <!-- 7. CONFESSION -->
-  <section id="confession" class="section dark-section midnight" data-bg-img="images/bg-confession.jpg">
+  <section id="confession" class="section dark-section midnight" data-bg-img="">
     <div class="hands-meet" id="handsMeet">
       <span class="hand hand-left">🖐️</span>
       <span class="hand hand-right">🖐️</span>
@@ -2273,11 +2271,11 @@
       <div class="gallery-row reveal">
         <div class="photo-frame"><img
             src="https://res.cloudinary.com/khovkitp/image/upload/v1785420307/dadar1_lmchyb.jpg"
-            onerror="this.onerror=null;this.style.display='none';this.insertAdjacentHTML('afterend','<span>📷 images/dadar1.jpg</span>')">
+            onerror="this.onerror=null;this.style.display='none';this.insertAdjacentHTML('afterend','<span>📷 </span>')">
         </div>
         <div class="photo-frame"><img
             src="https://res.cloudinary.com/khovkitp/image/upload/v1785420308/dadar2_orhadi.jpg"
-            onerror="this.onerror=null;this.style.display='none';this.insertAdjacentHTML('afterend','<span>📷 images/dadar2.jpg</span>')">
+            onerror="this.onerror=null;this.style.display='none';this.insertAdjacentHTML('afterend','<span>📷 </span>')">
         </div>
       </div>
 
@@ -2286,14 +2284,14 @@
         <div class="gift-item">
           <div class="gift-bubble"><img
               src="https://res.cloudinary.com/khovkitp/image/upload/v1785420314/gift-toy_r7ftdp.jpg"
-              onerror="this.onerror=null;this.style.display='none';this.parentElement.insertAdjacentHTML('beforeend','<span class=\'placeholder\'>🧸 images/gift-toy.jpg</span>')">
+              onerror="this.onerror=null;this.style.display='none';this.parentElement.insertAdjacentHTML('beforeend','<span class=\'placeholder\'>🧸</span>')">
           </div>
           <p class="gift-cap">🧸</p>
         </div>
         <div class="gift-item">
           <div class="gift-bubble"><img
               src="https://res.cloudinary.com/khovkitp/image/upload/v1785420312/gift_zq4v1d.jpg"
-              onerror="this.onerror=null;this.style.display='none';this.parentElement.insertAdjacentHTML('beforeend','<span class=\'placeholder\'>🎁 images/gift.jpg</span>')">
+              onerror="this.onerror=null;this.style.display='none';this.parentElement.insertAdjacentHTML('beforeend','<span class=\'placeholder\'>🎁</span>')">
           </div>
           <p class="gift-cap">We're a moment 🫃🏻</p>
         </div>
@@ -2302,7 +2300,7 @@
   </section>
 
   <!-- 9. DISTANCE -->
-  <section id="distance" class="section distance-section compact" data-bg-img="images/bg-distance.jpg">
+  <section id="distance" class="section distance-section compact" data-bg-img="">
     <div class="section-inner">
       <p class="tag reveal" style="color:#8a8ac9;">CHAPTER FIVE</p>
       <h2 class="reveal">Three Months, Two Cities</h2>
@@ -2351,7 +2349,7 @@
     <div class="card-overlay" id="cardOverlay">
       <button class="close-card" id="closeCardBtn">✕</button>
       <img src="https://res.cloudinary.com/khovkitp/image/upload/v1785420312/gift-card_lyfiva.jpg" alt="Birthday Card"
-        onerror="this.onerror=null;this.style.display='none';this.insertAdjacentHTML('afterend','<p class=\'placeholder-text\'>💌 Add images/gift-card.jpg (landscape)</p>')">
+        onerror="this.onerror=null;this.style.display='none';this.insertAdjacentHTML('afterend','<p class=\'placeholder-text\'>💌 (landscape)</p>')">
     </div>
   </section>
 
@@ -3045,7 +3043,22 @@ Happy Girlfriend Day, Kalu. I love you.`;
     let letterDone = false;
     new IntersectionObserver((entries) => {
       entries.forEach(e => {
-        if (e.isIntersecting && !letterDone) { letterDone = true; typeWriter(document.getElementById('letterText'), letterMsg, 16); }
+        if (e.isIntersecting && !letterDone) {
+          letterDone = true;
+          const signature = document.querySelector('#loveletter .signature');
+          if (signature) signature.classList.remove('show');
+
+          // Disable scroll snap during typing
+          document.body.classList.add('letter-typing');
+
+          typeWriter(document.getElementById('letterText'), letterMsg, 16, () => {
+            setTimeout(() => {
+              if (signature) signature.classList.add('show');
+              // Re-enable scroll snap after typing
+              document.body.classList.remove('letter-typing');
+            }, 500);
+          });
+        }
       });
     }, { threshold: .4 }).observe(document.getElementById('loveletter'));
 
