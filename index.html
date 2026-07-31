@@ -1523,12 +1523,16 @@
 
     .letter-box {
       max-width: 600px;
+      min-height: 500px;
       background: #fffaf5;
       color: #5a3a44;
       padding: 40px 30px;
       border-radius: 12px;
       box-shadow: 0 10px 40px rgba(0, 0, 0, .15);
       position: relative;
+      display: flex;
+      flex-direction: column;
+      justify-content: space-between;
     }
 
     .letter-box::before {
@@ -2416,7 +2420,7 @@
 
   <!-- 13. LOVE LETTER -->
   <section id="loveletter" class="section light-section" data-bg-img="images/bg-loveletter.jpg">
-    <div class="section-inner">
+    <div class="section-inner" style="justify-content:center;">
       <p class="tag reveal" style="color:var(--romance1);">A LITTLE SOMETHING FROM ME</p>
       <div class="letter-box reveal">
         <p id="letterText"></p>
