@@ -131,7 +131,6 @@ function initStars() {
 initStars();
 
 // Constellation state
-let constellationLines = []; // {from: star, to: star, progress: 0-1}
 let constellationActive = false;
 
 function drawStars() {
@@ -182,102 +181,168 @@ function drawStars() {
   });
   requestAnimationFrame(drawStars);
 }
-drawStars();
 
-// ============ 1. CONSTELLATION (NEW IMPROVED VERSION) ============
 
-// Constellation-specific stars (separate from background)
+// ============ 1. CONSTELLATION (PROFESSIONAL VERSION) ============
+
 let constellationStars = [];
 let constellationLinesNew = [];
 
-// Font-like letter definitions using dot patterns
-// Each letter is defined as an array of [x, y] points (relative 0-1)
-// Then lines connect consecutive points
-const letterDots = {
-  K: {
-    dots: [[0,0],[0,0.5],[0,1],[1,0],[0.5,0.5],[1,1]],
-    lines: [[0,1],[1,2],[3,4],[4,5]] // indices into dots
-  },
-  A: {
-    dots: [[0,1],[0.25,0.5],[0.5,0],[0.75,0.5],[1,1],[0.25,0.6],[0.75,0.6]],
-    lines: [[0,1],[1,2],[2,3],[3,4],[5,6]]
-  },
-  L: {
-    dots: [[0,0],[0,0.5],[0,1],[0.5,1],[1,1]],
-    lines: [[0,1],[1,2],[2,3],[3,4]]
-  },
-  U: {
-    dots: [[0,0],[0,0.5],[0,0.85],[0.3,1],[0.7,1],[1,0.85],[1,0.5],[1,0]],
-    lines: [[0,1],[1,2],[2,3],[3,4],[4,5],[5,6],[6,7]]
-  },
-  G: {
-    dots: [[1,0.15],[0.5,0],[0,0.15],[0,0.5],[0,0.85],[0.5,1],[1,0.85],[1,0.5],[0.5,0.5]],
-    lines: [[0,1],[1,2],[2,3],[3,4],[4,5],[5,6],[6,7],[7,8]]
-  },
-  O: {
-    dots: [[0.5,0],[0.15,0.15],[0,0.5],[0.15,0.85],[0.5,1],[0.85,0.85],[1,0.5],[0.85,0.15]],
-    lines: [[0,1],[1,2],[2,3],[3,4],[4,5],[5,6],[6,7],[7,0]]
-  },
-  J: {
-    dots: [[0.3,0],[0.7,0],[1,0],[1,0.5],[1,0.85],[0.7,1],[0.3,1],[0,0.85]],
-    lines: [[0,1],[1,2],[2,3],[3,4],[4,5],[5,6],[6,7]]
+// Extract points along text/shape outlines using a hidden canvas
+function extractPointsFromText(text, fontSize, fontFamily = 'bold Arial') {
+  const hiddenCanvas = document.createElement('canvas');
+  const hCtx = hiddenCanvas.getContext('2d');
+  hiddenCanvas.width = 2000;
+  hiddenCanvas.height = fontSize * 2;
+  
+  hCtx.font = `${fontSize}px ${fontFamily}`;
+  hCtx.fillStyle = '#fff';
+  hCtx.textBaseline = 'middle';
+  
+  const metrics = hCtx.measureText(text);
+  const textWidth = Math.ceil(metrics.width);
+  hiddenCanvas.width = textWidth + 20;
+  
+  hCtx.font = `${fontSize}px ${fontFamily}`;
+  hCtx.fillStyle = '#fff';
+  hCtx.textBaseline = 'middle';
+  hCtx.fillText(text, 10, fontSize);
+  
+  const imageData = hCtx.getImageData(0, 0, hiddenCanvas.width, hiddenCanvas.height);
+  const points = [];
+  const step = Math.max(4, Math.floor(fontSize / 20)); // Density of stars
+  
+  for (let y = 0; y < hiddenCanvas.height; y += step) {
+    for (let x = 0; x < hiddenCanvas.width; x += step) {
+      const idx = (y * hiddenCanvas.width + x) * 4;
+      if (imageData.data[idx + 3] > 128) { // alpha channel
+        points.push({ x, y, width: hiddenCanvas.width, height: hiddenCanvas.height });
+      }
+    }
   }
-};
-
-function buildLetter(letter, offsetX, offsetY, width, height) {
-  const def = letterDots[letter];
-  if (!def) return { dots: [], lines: [] };
   
-  const actualDots = def.dots.map(([x, y]) => ({
-    x: offsetX + x * width,
-    y: offsetY + y * height,
-    fadeIn: 0
-  }));
-  
-  const actualLines = def.lines.map(([fromIdx, toIdx]) => ({
-    from: actualDots[fromIdx],
-    to: actualDots[toIdx],
-    progress: 0
-  }));
-  
-  return { dots: actualDots, lines: actualLines };
+  return { points, width: hiddenCanvas.width, height: hiddenCanvas.height };
 }
 
-function buildHeart(centerX, centerY, size) {
-  const numPoints = 20;
-  const dots = [];
+// Extract only OUTLINE points (edge detection) for cleaner look
+function extractOutlinePoints(text, fontSize, fontFamily = 'bold Arial') {
+  const hiddenCanvas = document.createElement('canvas');
+  const hCtx = hiddenCanvas.getContext('2d');
+  
+  hCtx.font = `${fontSize}px ${fontFamily}`;
+  const metrics = hCtx.measureText(text);
+  const textWidth = Math.ceil(metrics.width);
+  
+  hiddenCanvas.width = textWidth + 40;
+  hiddenCanvas.height = fontSize * 1.5;
+  
+  hCtx.font = `${fontSize}px ${fontFamily}`;
+  hCtx.fillStyle = '#fff';
+  hCtx.textBaseline = 'middle';
+  hCtx.fillText(text, 20, hiddenCanvas.height / 2);
+  
+  const imageData = hCtx.getImageData(0, 0, hiddenCanvas.width, hiddenCanvas.height);
+  const data = imageData.data;
+  const w = hiddenCanvas.width;
+  const h = hiddenCanvas.height;
+  
+  // Find outline (pixels that are white AND have at least one transparent neighbor)
+  const outlinePoints = [];
+  for (let y = 1; y < h - 1; y++) {
+    for (let x = 1; x < w - 1; x++) {
+      const idx = (y * w + x) * 4 + 3;
+      if (data[idx] > 128) {
+        // Check neighbors for transparency (edge detection)
+        const neighbors = [
+          data[((y-1) * w + x) * 4 + 3],
+          data[((y+1) * w + x) * 4 + 3],
+          data[(y * w + (x-1)) * 4 + 3],
+          data[(y * w + (x+1)) * 4 + 3]
+        ];
+        if (neighbors.some(n => n < 128)) {
+          outlinePoints.push({ x, y });
+        }
+      }
+    }
+  }
+  
+  // Sample points to reduce density
+  const targetPoints = 80; // Total stars for the whole text
+  const step = Math.max(1, Math.floor(outlinePoints.length / targetPoints));
+  const sampled = [];
+  for (let i = 0; i < outlinePoints.length; i += step) {
+    sampled.push(outlinePoints[i]);
+  }
+  
+  return { points: sampled, width: w, height: h };
+}
+
+// Extract heart outline points
+function extractHeartOutlinePoints(size, numPoints = 30) {
+  const points = [];
   for (let i = 0; i < numPoints; i++) {
     const t = (i / numPoints) * Math.PI * 2;
     const x = 16 * Math.pow(Math.sin(t), 3);
     const y = -(13 * Math.cos(t) - 5 * Math.cos(2*t) - 2 * Math.cos(3*t) - Math.cos(4*t));
-    dots.push({ x: centerX + x * size, y: centerY + y * size, fadeIn: 0 });
+    points.push({ x: x * size, y: y * size });
   }
+  return points;
+}
+
+// Connect nearest neighbors to form nice constellation lines
+function connectNearestNeighbors(dots, maxConnections = 2, maxDistance = 100) {
+  const lines = [];
+  const connectionCount = new Map();
+  dots.forEach(d => connectionCount.set(d, 0));
   
+  // Sort dots by x then y for natural reading order
+  const sorted = [...dots].sort((a, b) => a.x - b.x || a.y - b.y);
+  
+  sorted.forEach((dot, i) => {
+    if (connectionCount.get(dot) >= maxConnections) return;
+    
+    // Find nearest neighbors
+    const candidates = sorted
+      .filter(d => d !== dot && connectionCount.get(d) < maxConnections)
+      .map(d => ({ dot: d, dist: Math.hypot(d.x - dot.x, d.y - dot.y) }))
+      .filter(c => c.dist < maxDistance)
+      .sort((a, b) => a.dist - b.dist)
+      .slice(0, maxConnections - connectionCount.get(dot));
+    
+    candidates.forEach(c => {
+      lines.push({ from: dot, to: c.dot, progress: 0 });
+      connectionCount.set(dot, connectionCount.get(dot) + 1);
+      connectionCount.set(c.dot, connectionCount.get(c.dot) + 1);
+    });
+  });
+  
+  return lines;
+}
+
+// Sequential connection for heart (each point to next in circle)
+function connectSequential(dots) {
   const lines = [];
   for (let i = 0; i < dots.length; i++) {
     lines.push({ from: dots[i], to: dots[(i + 1) % dots.length], progress: 0 });
   }
-  return { dots, lines };
+  return lines;
 }
 
-// Update drawStars to also draw constellation stars and lines
-const originalDrawStars = drawStars;
-
-// Override drawStars with new version
+// New drawing loop
 function drawStarsNew() {
   ctx.clearRect(0, 0, canvas.width, canvas.height);
   
-  // Draw background stars (unchanged, always twinkling)
+  // Background stars
   stars.forEach(st => {
     st.o += st.s;
-    const op = Math.abs(Math.sin(st.o)) * 0.6;
+    const op = Math.abs(Math.sin(st.o)) * 0.5;
     ctx.beginPath();
     ctx.arc(st.x, st.y, st.r, 0, 7);
     ctx.fillStyle = `rgba(255,255,255,${op})`;
     ctx.fill();
   });
   
-  // Draw constellation lines
+  // Constellation lines
   constellationLinesNew.forEach(line => {
     if (line.progress > 0) {
       const dx = line.to.x - line.from.x;
@@ -288,37 +353,34 @@ function drawStarsNew() {
       ctx.beginPath();
       ctx.moveTo(line.from.x, line.from.y);
       ctx.lineTo(currentX, currentY);
-      const gradient = ctx.createLinearGradient(line.from.x, line.from.y, currentX, currentY);
-      gradient.addColorStop(0, 'rgba(255, 111, 165, 1)');
-      gradient.addColorStop(0.5, 'rgba(255, 209, 102, 1)');
-      gradient.addColorStop(1, 'rgba(255, 111, 165, 1)');
-      ctx.strokeStyle = gradient;
-      ctx.lineWidth = 2;
-      ctx.shadowBlur = 15;
+      ctx.strokeStyle = 'rgba(255, 209, 102, 0.7)';
+      ctx.lineWidth = 1;
+      ctx.shadowBlur = 8;
       ctx.shadowColor = '#ffd166';
       ctx.stroke();
       ctx.shadowBlur = 0;
     }
   });
   
-  // Draw constellation stars (glowing dots)
+  // Constellation stars
   constellationStars.forEach(dot => {
-    if (dot.fadeIn < 1) dot.fadeIn = Math.min(dot.fadeIn + 0.04, 1);
+    if (dot.fadeIn === undefined) dot.fadeIn = 0;
+    if (dot.fadeIn < 1) dot.fadeIn = Math.min(dot.fadeIn + 0.05, 1);
     
     // Outer glow
     ctx.beginPath();
-    ctx.arc(dot.x, dot.y, 10 * dot.fadeIn, 0, 7);
-    const glowGradient = ctx.createRadialGradient(dot.x, dot.y, 0, dot.x, dot.y, 10);
-    glowGradient.addColorStop(0, `rgba(255, 209, 102, ${0.6 * dot.fadeIn})`);
+    ctx.arc(dot.x, dot.y, 8 * dot.fadeIn, 0, 7);
+    const glowGradient = ctx.createRadialGradient(dot.x, dot.y, 0, dot.x, dot.y, 8);
+    glowGradient.addColorStop(0, `rgba(255, 209, 102, ${0.7 * dot.fadeIn})`);
     glowGradient.addColorStop(1, 'rgba(255, 209, 102, 0)');
     ctx.fillStyle = glowGradient;
     ctx.fill();
     
     // Inner star
     ctx.beginPath();
-    ctx.arc(dot.x, dot.y, 3 * dot.fadeIn, 0, 7);
+    ctx.arc(dot.x, dot.y, 2 * dot.fadeIn, 0, 7);
     ctx.fillStyle = `rgba(255, 255, 255, ${dot.fadeIn})`;
-    ctx.shadowBlur = 20;
+    ctx.shadowBlur = 15;
     ctx.shadowColor = '#ffd166';
     ctx.fill();
     ctx.shadowBlur = 0;
@@ -327,7 +389,6 @@ function drawStarsNew() {
   requestAnimationFrame(drawStarsNew);
 }
 
-// Cancel original animation and start new one
 let drawStarsStarted = false;
 function startNewDrawLoop() {
   if (drawStarsStarted) return;
@@ -365,61 +426,62 @@ function demo1_constellation() {
   const centerX = w / 2;
   const centerY = h / 2;
   
-  // Letter dimensions
-  const letterHeight = Math.min(h * 0.13, 100);
-  const letterWidth = letterHeight * 0.65;
-  const spacing = letterWidth * 0.4;
+  const fontSize = Math.min(w * 0.12, h * 0.14, 130);
   
-  // KALU on top
-  const kaluWidth = 4 * letterWidth + 3 * spacing;
-  const kaluStartX = centerX - kaluWidth / 2;
-  const kaluY = centerY - letterHeight - 60;
+  // Extract KALU outline
+  const kaluData = extractOutlinePoints('KALU', fontSize, 'bold Arial');
+  const kaluDots = kaluData.points.map(p => ({
+    x: centerX - kaluData.width / 2 + p.x,
+    y: centerY - fontSize - 20 + p.y,
+    fadeIn: 0
+  }));
   
-  const K = buildLetter('K', kaluStartX, kaluY, letterWidth, letterHeight);
-  const A = buildLetter('A', kaluStartX + (letterWidth + spacing), kaluY, letterWidth, letterHeight);
-  const L = buildLetter('L', kaluStartX + 2 * (letterWidth + spacing), kaluY, letterWidth, letterHeight);
-  const U = buildLetter('U', kaluStartX + 3 * (letterWidth + spacing), kaluY, letterWidth, letterHeight);
+  // Extract GOJO outline
+  const gojoData = extractOutlinePoints('GOJO', fontSize, 'bold Arial');
+  const gojoDots = gojoData.points.map(p => ({
+    x: centerX - gojoData.width / 2 + p.x,
+    y: centerY + 20 + p.y,
+    fadeIn: 0
+  }));
   
-  // GOJO below
-  const gojoWidth = 4 * letterWidth + 3 * spacing;
-  const gojoStartX = centerX - gojoWidth / 2;
-  const gojoY = centerY + 60;
-  
-  const G = buildLetter('G', gojoStartX, gojoY, letterWidth, letterHeight);
-  const O1 = buildLetter('O', gojoStartX + (letterWidth + spacing), gojoY, letterWidth, letterHeight);
-  const J = buildLetter('J', gojoStartX + 2 * (letterWidth + spacing), gojoY, letterWidth, letterHeight);
-  const O2 = buildLetter('O', gojoStartX + 3 * (letterWidth + spacing), gojoY, letterWidth, letterHeight);
-  
-  // Add KALU stars first
-  const kaluDots = [...K.dots, ...A.dots, ...L.dots, ...U.dots];
-  const kaluLines = [...K.lines, ...A.lines, ...L.lines, ...U.lines];
+  // Show KALU stars first
   constellationStars = kaluDots;
   
-  // Wait for dots to fade in, then draw lines
   setTimeout(() => {
+    // Connect KALU stars
+    const kaluLines = connectNearestNeighbors(kaluDots, 2, fontSize * 0.35);
     constellationLinesNew = kaluLines;
-    animateGroup(kaluLines, 2000, 'progress', () => {
-      // Now show GOJO
-      const gojoDots = [...G.dots, ...O1.dots, ...J.dots, ...O2.dots];
-      const gojoLines = [...G.lines, ...O1.lines, ...J.lines, ...O2.lines];
+    animateGroup(kaluLines, 1800, 'progress', () => {
+      
+      // Show GOJO stars
       constellationStars = [...kaluDots, ...gojoDots];
       
       setTimeout(() => {
+        // Connect GOJO stars
+        const gojoLines = connectNearestNeighbors(gojoDots, 2, fontSize * 0.35);
         constellationLinesNew = [...kaluLines, ...gojoLines];
-        animateGroup(gojoLines, 2000, 'progress', () => {
-          // Finally, heart around everything
-          const heartSize = Math.min(w, h) * 0.35 / 30;
-          const heart = buildHeart(centerX, centerY, heartSize * 20);
-          constellationStars = [...kaluDots, ...gojoDots, ...heart.dots];
+        animateGroup(gojoLines, 1800, 'progress', () => {
+          
+          // Show heart around everything
+          const heartSize = Math.min(w, h) * 0.012;
+          const heartPoints = extractHeartOutlinePoints(heartSize, 30);
+          const heartDots = heartPoints.map(p => ({
+            x: centerX + p.x,
+            y: centerY + p.y + 20,
+            fadeIn: 0
+          }));
+          constellationStars = [...kaluDots, ...gojoDots, ...heartDots];
           
           setTimeout(() => {
-            constellationLinesNew = [...kaluLines, ...gojoLines, ...heart.lines];
-            animateGroup(heart.lines, 2500, 'progress');
-          }, 400);
+            // Connect heart sequentially
+            const heartLines = connectSequential(heartDots);
+            constellationLinesNew = [...kaluLines, ...gojoLines, ...heartLines];
+            animateGroup(heartLines, 2500, 'progress');
+          }, 500);
         });
-      }, 400);
+      }, 500);
     });
-  }, 600);
+  }, 800);
 }
 
 // ============ 2. PHOTO RAIN ============
