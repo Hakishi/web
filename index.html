@@ -3279,11 +3279,45 @@ Happy Girlfriend Day, Kalu. I love you.`;
     updateCarousel();
     document.getElementById('nextBtn').addEventListener('click', () => { active = (active + 1) % cards.length; updateCarousel(); });
     document.getElementById('prevBtn').addEventListener('click', () => { active = (active - 1 + cards.length) % cards.length; updateCarousel(); });
-    let autoRotate = setInterval(() => { active = (active + 1) % cards.length; updateCarousel(); }, 4500);
+    let autoRotate = null;
+
+    function startAutoRotate() {
+      if (autoRotate) return;
+      autoRotate = setInterval(() => {
+        active = (active + 1) % cards.length;
+        updateCarousel();
+      }, 4500);
+    }
+
+    function stopAutoRotate() {
+      if (autoRotate) {
+        clearInterval(autoRotate);
+        autoRotate = null;
+      }
+    }
+
+    // Only auto-rotate when gallery section is visible
+    new IntersectionObserver((entries) => {
+      entries.forEach(entry => {
+        if (entry.isIntersecting) {
+          startAutoRotate();
+        } else {
+          stopAutoRotate();
+          // Pause all carousel videos when gallery not visible
+          cards.forEach(card => {
+            if (card._videoNode) {
+              card._videoNode.pause();
+            }
+          });
+        }
+      });
+    }, { threshold: 0.5 }).observe(document.getElementById('gallery'));
+
+    // Reset timer on manual navigation
     ['prevBtn', 'nextBtn'].forEach(id => {
       document.getElementById(id).addEventListener('click', () => {
-        clearInterval(autoRotate);
-        autoRotate = setInterval(() => { active = (active + 1) % cards.length; updateCarousel(); }, 4500);
+        stopAutoRotate();
+        startAutoRotate();
       });
     });
 
