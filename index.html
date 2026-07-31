@@ -2625,6 +2625,21 @@
     }
     document.addEventListener('click', (e) => { spawnSparkles(e.clientX, e.clientY); }, true);
 
+    /* ============ VIDEO OPTIMIZATION ============ */
+    const videoObserver = new IntersectionObserver((entries) => {
+      entries.forEach(entry => {
+        const video = entry.target;
+        if (entry.isIntersecting) {
+          video.play().catch(() => { });
+        } else {
+          video.pause();
+        }
+      });
+    }, { threshold: 0.25 });
+
+    // Observe all videos
+    document.querySelectorAll('video').forEach(v => videoObserver.observe(v));
+
     /* ---------- SMART BACKGROUND MEDIA INJECTOR (PRELOAD BUT DON'T PLAY) ---------- */
     document.querySelectorAll('.section[data-bg-img], .section[data-bg-video]').forEach(sec => {
       const imgSrc = sec.getAttribute('data-bg-img');
