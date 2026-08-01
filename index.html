@@ -3241,6 +3241,48 @@ Happy Girlfriend Day, Kalu. I love you.`;
     updateCarousel();
     document.getElementById('nextBtn').addEventListener('click', () => { active = (active + 1) % cards.length; updateCarousel(); });
     document.getElementById('prevBtn').addEventListener('click', () => { active = (active - 1 + cards.length) % cards.length; updateCarousel(); });
+
+    /* ---------- Carousel touch/swipe support ---------- */
+    let touchStartX = 0;
+    let touchStartY = 0;
+    let isSwiping = false;
+    const carouselTrack = document.getElementById('carouselTrack');
+
+    carouselTrack.addEventListener('touchstart', (e) => {
+      touchStartX = e.touches[0].clientX;
+      touchStartY = e.touches[0].clientY;
+      isSwiping = false;
+    }, { passive: true });
+
+    carouselTrack.addEventListener('touchmove', (e) => {
+      if (!isSwiping) {
+        const dx = Math.abs(e.touches[0].clientX - touchStartX);
+        const dy = Math.abs(e.touches[0].clientY - touchStartY);
+        // Only hijack horizontal swipes (not vertical scroll)
+        if (dx > dy && dx > 10) {
+          isSwiping = true;
+        }
+      }
+    }, { passive: true });
+
+    carouselTrack.addEventListener('touchend', (e) => {
+      if (!isSwiping) return;
+      const diff = touchStartX - e.changedTouches[0].clientX;
+      if (Math.abs(diff) > 50) {
+        if (diff > 0) {
+          // Swiped left → next
+          active = (active + 1) % cards.length;
+        } else {
+          // Swiped right → previous
+          active = (active - 1 + cards.length) % cards.length;
+        }
+        updateCarousel();
+        stopAutoRotate();
+        startAutoRotate();
+      }
+      isSwiping = false;
+    }, { passive: true });
+
     let autoRotate = null;
 
     function startAutoRotate() {
