@@ -3361,11 +3361,33 @@
       entries.forEach(e => { if (e.isIntersecting) document.querySelectorAll('.month-fade span').forEach((s, i) => setTimeout(() => s.classList.add('in-view'), i * 400)); });
     }, { threshold: .3 }).observe(document.getElementById('distance'));
 
-    /* ---------- Typewriter helper ---------- */
-    function typeWriter(el, text, speed = 60, cb) {
+    /* ---------- Typewriter helper (with optional auto-scroll) ---------- */
+    function typeWriter(el, text, speed = 60, cb, autoScroll = false) {
       let i = 0; el.textContent = '';
+
       function type() {
-        if (i < text.length) { el.textContent = text.slice(0, i + 1); i++; setTimeout(type, speed); }
+        if (i < text.length) {
+          el.textContent = text.slice(0, i + 1);
+          i++;
+
+          // Auto-scroll every character (instant, no smooth to avoid lag chase)
+          if (autoScroll) {
+            // Find footer element
+            const footer = document.querySelector('footer');
+            if (footer) {
+              const footerRect = footer.getBoundingClientRect();
+              const viewportH = window.innerHeight;
+
+              // If footer bottom is below viewport, scroll it into view
+              if (footerRect.bottom > viewportH) {
+                const scrollAmount = footerRect.bottom - viewportH + 10;
+                window.scrollBy({ top: scrollAmount, behavior: 'auto' }); // instant, not smooth
+              }
+            }
+          }
+
+          setTimeout(type, speed);
+        }
         else if (cb) cb();
       }
       type();
@@ -3754,7 +3776,7 @@ Happy Girlfriend Day, mentosss. I love you — ass tujhi and all. 😄❤️`;
       if (_v(secretInput.value)) {
         lockError.textContent = '';
         secretMessage.classList.add('show');
-        typeWriter(document.getElementById('secretText'), secretNote, 18);
+        typeWriter(document.getElementById('secretText'), secretNote, 18, null, true);
         unlockBtn.disabled = true; secretInput.disabled = true;
       } else {
         lockError.textContent = "Not quite... hint: the day we matched 😉";
