@@ -2506,7 +2506,8 @@
 
     <div class="card-overlay" id="cardOverlay">
       <button class="close-card" id="closeCardBtn">✕</button>
-      <img src="https://res.cloudinary.com/khovkitp/image/upload/f_auto,q_auto/v1785420312/gift-card_lyfiva.jpg" alt="Birthday Card"
+      <img src="https://res.cloudinary.com/khovkitp/image/upload/f_auto,q_auto/v1785420312/gift-card_lyfiva.jpg"
+        alt="Birthday Card"
         onerror="this.onerror=null;this.style.display='none';this.insertAdjacentHTML('afterend','<p class=\'placeholder-text\'>💌 (landscape)</p>')">
     </div>
   </section>
@@ -3017,32 +3018,14 @@
     });
     revealEls.forEach(el => resetObserver.observe(el));
 
-    /* ---------- Scroll progress bar + parallax on backgrounds ---------- */
-    const parallaxSections = document.querySelectorAll('.section[data-bg-img], .section[data-bg-video]');
+    /* ---------- Scroll progress bar ---------- */
     let scrollTicking = false;
-
     window.addEventListener('scroll', () => {
       if (!scrollTicking) {
         requestAnimationFrame(() => {
           const h = document.documentElement;
           const scrolled = (h.scrollTop) / (h.scrollHeight - h.clientHeight) * 100;
           document.getElementById('scrollProgress').style.width = scrolled + '%';
-
-          // Parallax for background media
-          const viewH = window.innerHeight;
-          parallaxSections.forEach(sec => {
-            const rect = sec.getBoundingClientRect();
-            // Only apply parallax when section is near viewport
-            if (rect.bottom < -100 || rect.top > viewH + 100) return;
-
-            const media = sec.querySelector('.section-media');
-            if (media) {
-              // Move background at 15% of scroll speed for subtle depth
-              const parallaxOffset = rect.top * 0.15;
-              media.style.transform = `translate3d(0, ${parallaxOffset}px, 0)`;
-            }
-          });
-
           scrollTicking = false;
         });
         scrollTicking = true;
