@@ -3581,6 +3581,13 @@ Happy Girlfriend Day, mentosss. I love you — ass tujhi and all. 😄❤️`;
         animationRunning = false;
         if (meteorInterval) clearInterval(meteorInterval);
 
+        // Restore body styles immediately                    
+        document.body.classList.remove('constellation-open'); // ← ADD THIS
+        document.body.style.top = '';                         // ← ADD THIS
+        document.body.style.position = '';                    // ← ADD THIS
+        document.body.style.overflow = '';                    // ← ADD THIS
+        document.body.style.width = '';                       // ← ADD THIS
+
         // Smooth scroll to secret section (the last section)
         setTimeout(() => {
           const secretSection = document.getElementById('secret');
@@ -4461,6 +4468,9 @@ Happy Girlfriend Day, mentosss. I love you — ass tujhi and all. 😄❤️`;
         // INSTANT scroll to secret section (invisible while overlay is up)
         document.body.classList.remove('constellation-open');
         document.body.style.top = '';
+        document.body.style.position = '';   // ← ADD THIS
+        document.body.style.overflow = '';   // ← ADD THIS
+        document.body.style.width = '';      // ← ADD THIS
 
         const secretSection = document.getElementById('secret');
         if (secretSection) {
@@ -4477,6 +4487,10 @@ Happy Girlfriend Day, mentosss. I love you — ass tujhi and all. 😄❤️`;
           document.querySelectorAll('.star-label').forEach(l => l.remove());
           overlay.classList.remove('closing');
           overlay.style.pointerEvents = ''; // Reset
+          // Safety net cleanup in case any style leaked
+          document.body.style.position = '';  // ← ADD THIS
+          document.body.style.overflow = '';  // ← ADD THIS
+          document.body.style.width = '';     // ← ADD THIS
         }, 1800);
       }
 
@@ -4774,6 +4788,8 @@ Happy Girlfriend Day, mentosss. I love you — ass tujhi and all. 😄❤️`;
                   document.body.style.top = '';
                   document.body.style.position = '';
                   document.body.style.overflow = '';
+                  document.body.style.width = '';    // ← ADD THIS
+                  document.body.style.height = '';   // ← ADD THIS
                   window.reopenConstellationPermanent();
                 }
               }, 1200);
