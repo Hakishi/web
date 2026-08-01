@@ -3609,11 +3609,11 @@ Happy Girlfriend Day, mentosss. I love you — ass tujhi and all. 😄❤️`;
         if (meteorInterval) clearInterval(meteorInterval);
 
         // Restore body styles immediately                    
-        document.body.classList.remove('constellation-open'); // ← ADD THIS
-        document.body.style.top = '';                         // ← ADD THIS
-        document.body.style.position = '';                    // ← ADD THIS
-        document.body.style.overflow = '';                    // ← ADD THIS
-        document.body.style.width = '';                       // ← ADD THIS
+        document.body.classList.remove('constellation-open');
+        document.body.style.top = '';
+        document.body.style.position = '';
+        document.body.style.overflow = '';
+        document.body.style.width = '';
 
         // Smooth scroll to secret section (the last section)
         setTimeout(() => {
@@ -3624,6 +3624,15 @@ Happy Girlfriend Day, mentosss. I love you — ass tujhi and all. 😄❤️`;
           // Clean up
           document.querySelectorAll('.star-label').forEach(l => l.remove());
           overlay.style.transition = '';
+
+          // Re-enable confetti button so user can replay surprise
+          const confettiBtn = document.getElementById('confettiBtn');
+          if (confettiBtn) {
+            confettiBtn.disabled = false;
+            confettiBtn.textContent = '🎉 Tap for a Surprise';
+            confettiBtn.style.opacity = '';
+            confettiBtn.style.transform = '';
+          }
         }, 500);
       }
 
@@ -4531,9 +4540,18 @@ Happy Girlfriend Day, mentosss. I love you — ass tujhi and all. 😄❤️`;
           overlay.classList.remove('closing');
           overlay.style.pointerEvents = ''; // Reset
           // Safety net cleanup in case any style leaked
-          document.body.style.position = '';  // ← ADD THIS
-          document.body.style.overflow = '';  // ← ADD THIS
-          document.body.style.width = '';     // ← ADD THIS
+          document.body.style.position = '';
+          document.body.style.overflow = '';
+          document.body.style.width = '';
+
+          // Re-enable confetti button so user can replay surprise
+          const confettiBtn = document.getElementById('confettiBtn');
+          if (confettiBtn) {
+            confettiBtn.disabled = false;
+            confettiBtn.textContent = '🎉 Tap for a Surprise';
+            confettiBtn.style.opacity = '';
+            confettiBtn.style.transform = '';
+          }
         }, 1800);
       }
 
