@@ -3120,7 +3120,6 @@
         if (idx > -1) goToSection(idx);
       });
     });
-
     document.getElementById('startBtn').addEventListener('click', () => {
       const idx = allSections.findIndex(s => s.id === 'match');
       goToSection(idx);
@@ -3133,6 +3132,10 @@
     audioA.loop = true; audioB.loop = true;
     let activeAudio = audioA, inactiveAudio = audioB;
     let currentTrack = null, musicEnabled = false, fading = false;
+
+    // Reference for post-constellation audio (will adopt constAudio after handoff)
+    window.postConstAudio = null;
+    let postConstActive = false;
 
     const sectionMusic = {
       hero: 'https://res.cloudinary.com/khovkitp/video/upload/v1785421485/theme-start_xhnr9b.mp3',
@@ -3148,6 +3151,12 @@
     }
 
     function crossfadeTo(src) {
+      // Skip if post-constellation audio is playing (it owns the audio experience now)
+      if (postConstActive) return;
+
+      // Skip track switching while music is locked (constellation dismiss → hero flow)
+      if (window.__musicLocked) return;
+
       if (!src || src === currentTrack || fading) return;
       currentTrack = src; fading = true;
       inactiveAudio.src = src; inactiveAudio.volume = 0; inactiveAudio.currentTime = 0;
@@ -3178,7 +3187,33 @@
         currentHopeTrack = track;
         document.querySelectorAll('.hope-btn').forEach(b => b.classList.remove('active'));
         btn.classList.add('active');
-        crossfadeTo(currentHopeTrack);
+
+        // If post-constellation audio is active, switch it
+        if (postConstActive && window.postConstAudio) {
+          try {
+            window.postConstAudio.pause();
+            window.postConstAudio.src = track;
+            window.postConstAudio.loop = true;
+            window.postConstAudio.volume = 1;
+            window.postConstAudio.currentTime = 0;
+            window.postConstAudio.play().catch(() => { });
+          } catch (e) { }
+          return;
+        }
+
+        if (window.__musicLocked) {
+          try {
+            activeAudio.pause();
+            activeAudio.src = track;
+            activeAudio.loop = true;
+            activeAudio.volume = 1;
+            activeAudio.currentTime = 0;
+            currentTrack = track;
+            activeAudio.play().catch(() => { });
+          } catch (e) { }
+        } else {
+          crossfadeTo(currentHopeTrack);
+        }
       });
     });
 
@@ -3208,8 +3243,29 @@
 
     musicBtn.addEventListener('click', () => {
       hideTapPrompt();
-      if (musicEnabled) { musicEnabled = false; activeAudio.pause(); inactiveAudio.pause(); musicBtn.classList.remove('playing'); }
-      else { musicEnabled = true; activeAudio.play().catch(() => { }); musicBtn.classList.add('playing'); }
+
+      // If post-constellation audio is active, control THAT instead
+      if (postConstActive && window.postConstAudio) {
+        if (window.postConstAudio.paused) {
+          window.postConstAudio.play().catch(() => { });
+          musicBtn.classList.add('playing');
+        } else {
+          window.postConstAudio.pause();
+          musicBtn.classList.remove('playing');
+        }
+        return;
+      }
+
+      if (musicEnabled) {
+        musicEnabled = false;
+        activeAudio.pause();
+        inactiveAudio.pause();
+        musicBtn.classList.remove('playing');
+      } else {
+        musicEnabled = true;
+        activeAudio.play().catch(() => { });
+        musicBtn.classList.add('playing');
+      }
     });
 
     function initMusicSystem() {
@@ -3831,8 +3887,23 @@ Happy Girlfriend Day, mentosss. I love you — ass tujhi and all. 😄❤️`;
         document.body.style.overflow = '';
         document.body.style.width = '';
 
-        // Clean up after overlay fades — do NOT force scroll back
-        // Respect the user's scroll direction (they scrolled up to dismiss)
+        // postConstAudio is already handling music independently — no lock needed
+        // Just ensure main audio elements are silent
+        try {
+          audioA.pause();
+          audioB.pause();
+        } catch (e) { }
+
+        // Smoothly scroll ALL the way back to hero section as the overlay fades
+        const heroSection = document.getElementById('hero');
+        if (heroSection) {
+          // Use native smooth scroll with a slight delay so overlay fade starts first
+          setTimeout(() => {
+            heroSection.scrollIntoView({ behavior: 'smooth', block: 'start' });
+          }, 100);
+        }
+
+        // Clean up after overlay fades
         setTimeout(() => {
           document.querySelectorAll('.star-label').forEach(l => l.remove());
           overlay.style.transition = '';
@@ -4736,37 +4807,54 @@ Happy Girlfriend Day, mentosss. I love you — ass tujhi and all. 😄❤️`;
         if (meteorInterval) clearInterval(meteorInterval);
         document.getElementById('cCloseBtn').classList.remove('show');
         document.querySelector('.const-top-controls').style.opacity = '0';
-
-        // Direct audio handoff — no duplicate playback, no restart, no glitch
-        // The constellation audio IS the secret section music, so just tell the
-        // main music system to adopt it as its active audio element.
-        if (typeof activeAudio !== 'undefined' && constAudio) {
-          // Stop the main system's audio elements silently (they're not playing anyway)
+        // Take over the constAudio element directly instead of transferring
+        // This avoids ANY gap in audio playback
+        if (constAudio) {
           try {
+            // Pause main music system entirely
             audioA.pause();
-            audioA.src = '';
             audioB.pause();
-            audioB.src = '';
-          } catch (e) { }
+            musicEnabled = false;
 
-          // Adopt constAudio as the new active audio
-          // Note: We reassign the module-level activeAudio reference
-          activeAudio = constAudio;
-          inactiveAudio = audioA; // Use audioA as the new inactive slot
+            // ADOPT constAudio as our postConstAudio (same element, no interruption)
+            // Since constAudio is already playing SECRET_SECTION_MUSIC, we just need
+            // to attach the ended handler and mark it as active
+            window.postConstAudio = constAudio;
 
-          if (typeof currentTrack !== 'undefined') currentTrack = SECRET_SECTION_MUSIC;
-          if (typeof musicEnabled !== 'undefined') musicEnabled = true;
-          if (typeof musicBtn !== 'undefined') musicBtn.classList.add('playing');
+            // Ensure loop is disabled so 'ended' will fire
+            window.postConstAudio.loop = false;
 
-          // Ensure it stays at full volume — no fade needed since it never stopped
-          try { activeAudio.volume = 1; } catch (e) { }
+            // Setup end handler
+            window.postConstAudio.onended = function () {
+              console.log('🎵 Secret track ended, switching to hope-2');
+              window.postConstAudio.src = 'https://res.cloudinary.com/khovkitp/video/upload/v1785421481/theme-hope-2_zqrprp.mp3';
+              window.postConstAudio.loop = true;
+              window.postConstAudio.volume = 1;
+              window.postConstAudio.currentTime = 0;
+              window.postConstAudio.play().catch(() => {
+                const resume = () => window.postConstAudio.play().catch(() => { });
+                ['click', 'touchstart', 'keydown', 'wheel', 'scroll'].forEach(ev => {
+                  window.addEventListener(ev, resume, { once: true });
+                });
+              });
 
-          // Release constAudio reference so IIFE knows main system owns it now
-          constAudio = null;
-        } else {
-          if (constAudio) {
-            constAudio.pause();
+              document.querySelectorAll('.hope-btn').forEach(b => {
+                b.classList.toggle('active',
+                  b.getAttribute('data-track') === 'https://res.cloudinary.com/khovkitp/video/upload/v1785421481/theme-hope-2_zqrprp.mp3');
+              });
+            };
+
+            postConstActive = true;
+            if (typeof musicBtn !== 'undefined') musicBtn.classList.add('playing');
+
+            // Release the constAudio reference — postConstAudio now owns it
             constAudio = null;
+          } catch (e) {
+            console.log('Handoff error:', e);
+            if (constAudio) {
+              try { constAudio.pause(); } catch (e2) { }
+              constAudio = null;
+            }
           }
         }
 
