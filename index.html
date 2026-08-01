@@ -2347,7 +2347,7 @@
 
   <!-- 10. CINEMA NIGHT -->
   <section id="cinema" class="section cinema-section"
-    data-bg-img="https://res.cloudinary.com/khovkitp/image/upload/f_auto,q_auto/v1785427111/bg-cinema_pvd3bn.jpg">
+    data-bg-img="https://res.cloudinary.com/khovkitp/image/upload/v1785427111/bg-cinema_pvd3bn.jpg">
     <div class="section-inner" style="max-width:900px;">
       <p class="tag reveal" style="color:#e0c9ff;">CHAPTER SIX • 18TH JUNE 2026</p>
       <h2 class="reveal">Cozy in the Dark Theatre</h2>
@@ -4133,6 +4133,13 @@ Happy Girlfriend Day, mentosss. I love you — ass tujhi and all. 😄❤️`;
 
       function draw() {
         if (!animationRunning) return;
+
+        // Pause drawing when tab is hidden (saves CPU/battery)
+        if (document.hidden) {
+          requestAnimationFrame(draw);
+          return;
+        }
+
         frameCount++;
         constCtx.clearRect(0, 0, constCanvas.width, constCanvas.height);
         bgStars.forEach(st => {
@@ -4326,9 +4333,18 @@ Happy Girlfriend Day, mentosss. I love you — ass tujhi and all. 😄❤️`;
 
         function frame(now) {
           if (!animationRunning) return;
+
+          // Skip frame if tab is hidden (don't advance animation timer)
+          if (document.hidden) {
+            requestAnimationFrame(frame);
+            return;
+          }
+
           const deltaTime = now - lastFrameTime;
           lastFrameTime = now;
-          elapsedAccum += deltaTime * speedMultiplier;
+          // Cap deltaTime to 200ms to prevent animation jumping after tab switch
+          const cappedDelta = Math.min(deltaTime, 200);
+          elapsedAccum += cappedDelta * speedMultiplier;
 
           lines.forEach((line, i) => {
             const timing = timings[i];
