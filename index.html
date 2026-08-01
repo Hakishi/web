@@ -3500,8 +3500,20 @@ This whole website, every animation, every little joke hidden in here — is jus
 
 Happy Girlfriend Day, mentosss. I love you — ass tujhi and all. 😄❤️`;
 
+    // Light obfuscation — not cryptographic, just stops casual DevTools snooping
+    const _k = [50, 54, 49, 49, 50, 53]; // Character codes for the secret
+    function _v(input) {
+      const trimmed = input.trim();
+      if (trimmed.length !== _k.length) return false;
+      let match = true;
+      for (let i = 0; i < _k.length; i++) {
+        if (trimmed.charCodeAt(i) !== _k[i]) { match = false; break; }
+      }
+      return match;
+    }
+
     function tryUnlock() {
-      if (secretInput.value.trim() === '261125') {
+      if (_v(secretInput.value)) {
         lockError.textContent = '';
         secretMessage.classList.add('show');
         typeWriter(document.getElementById('secretText'), secretNote, 18);
