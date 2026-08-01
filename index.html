@@ -1475,6 +1475,14 @@
       position: relative;
       width: 100%;
       height: 100%;
+      outline: none;
+      /* Remove default blue outline */
+    }
+
+    .carousel-track:focus-visible {
+      outline: 2px solid rgba(255, 111, 165, 0.5);
+      outline-offset: 8px;
+      border-radius: 12px;
     }
 
     .carousel-card {
@@ -3365,6 +3373,40 @@ Happy Girlfriend Day, Kalu. I love you.`;
       isSwiping = false;
     }, { passive: true });
 
+    /* ---------- Carousel keyboard support ---------- */
+    // Make carousel focusable
+    carouselTrack.setAttribute('tabindex', '0');
+    carouselTrack.setAttribute('role', 'region');
+    carouselTrack.setAttribute('aria-label', 'Photo gallery carousel');
+
+    carouselTrack.addEventListener('keydown', (e) => {
+      if (e.key === 'ArrowLeft') {
+        e.preventDefault();
+        active = (active - 1 + cards.length) % cards.length;
+        updateCarousel();
+        stopAutoRotate();
+        startAutoRotate();
+      } else if (e.key === 'ArrowRight') {
+        e.preventDefault();
+        active = (active + 1) % cards.length;
+        updateCarousel();
+        stopAutoRotate();
+        startAutoRotate();
+      }
+    });
+
+    // Auto-focus carousel when gallery section becomes visible
+    new IntersectionObserver((entries) => {
+      entries.forEach(entry => {
+        if (entry.isIntersecting) {
+          // Small delay to avoid scroll interference
+          setTimeout(() => {
+            if (galleryVisible) carouselTrack.focus({ preventScroll: true });
+          }, 500);
+        }
+      });
+    }, { threshold: 0.6 }).observe(document.getElementById('gallery'));
+
     let autoRotate = null;
 
     function startAutoRotate() {
@@ -4083,6 +4125,10 @@ Happy Girlfriend Day, mentosss. I love you — ass tujhi and all. 😄❤️`;
             scint: generateScintillation()
           });
         }
+
+        // Force background star cache rebake on next draw
+        bgStarCacheFrame = -999;
+        bgStarCacheCanvas = null;
       }
 
       function spawnMeteor() {
@@ -4236,6 +4282,43 @@ Happy Girlfriend Day, mentosss. I love you — ass tujhi and all. 😄❤️`;
         }
       }
 
+      // Offscreen canvas for pre-baking background stars
+      let bgStarCacheCanvas = null;
+      let bgStarCacheCtx = null;
+      let bgStarCacheFrame = -999; // Force initial bake
+      const BG_STAR_REBAKE_INTERVAL = 120; // Rebake every ~2 seconds at 60fps
+
+      function bakeBgStars() {
+        if (!bgStarCacheCanvas) {
+          bgStarCacheCanvas = document.createElement('canvas');
+          bgStarCacheCanvas.width = constCanvas.width;
+          bgStarCacheCanvas.height = constCanvas.height;
+          bgStarCacheCtx = bgStarCacheCanvas.getContext('2d');
+        }
+
+        // Resize if needed
+        if (bgStarCacheCanvas.width !== constCanvas.width || bgStarCacheCanvas.height !== constCanvas.height) {
+          bgStarCacheCanvas.width = constCanvas.width;
+          bgStarCacheCanvas.height = constCanvas.height;
+        }
+
+        bgStarCacheCtx.clearRect(0, 0, bgStarCacheCanvas.width, bgStarCacheCanvas.height);
+
+        // Temporarily swap context so drawStar renders to offscreen canvas
+        const originalCtx = constCtx;
+        constCtx = bgStarCacheCtx;
+
+        bgStars.forEach(st => {
+          const twinkleAmount = st.magnitude < 2 ? 0.25 : 0.15;
+          const brightness = st.baseBrightness * getScintillationBrightness(st.scint, frameCount, twinkleAmount);
+          drawStar(st.x, st.y, st.magnitude, st.color, brightness);
+        });
+
+        // Restore original context
+        constCtx = originalCtx;
+        bgStarCacheFrame = frameCount;
+      }
+
       function draw() {
         if (!animationRunning) return;
 
@@ -4247,11 +4330,16 @@ Happy Girlfriend Day, mentosss. I love you — ass tujhi and all. 😄❤️`;
 
         frameCount++;
         constCtx.clearRect(0, 0, constCanvas.width, constCanvas.height);
-        bgStars.forEach(st => {
-          const twinkleAmount = st.magnitude < 2 ? 0.25 : 0.15;
-          const brightness = st.baseBrightness * getScintillationBrightness(st.scint, frameCount, twinkleAmount);
-          drawStar(st.x, st.y, st.magnitude, st.color, brightness);
-        });
+
+        // Rebake background stars periodically for twinkle effect
+        if (frameCount - bgStarCacheFrame >= BG_STAR_REBAKE_INTERVAL) {
+          bakeBgStars();
+        }
+
+        // Single drawImage call instead of 250 individual star draws
+        if (bgStarCacheCanvas) {
+          constCtx.drawImage(bgStarCacheCanvas, 0, 0);
+        }
         constellationDots.forEach(dot => {
           if (dot.isRevealed) {
             if (dot.revealProgress < 1) dot.revealProgress = Math.min(dot.revealProgress + 0.015 * speedMultiplier, 1);
