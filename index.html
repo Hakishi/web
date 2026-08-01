@@ -3765,43 +3765,55 @@ Happy Girlfriend Day, mentosss. I love you — ass tujhi and all. 😄❤️`;
         showStarLabels();
         document.getElementById('cFinalText').classList.add('show');
 
-        // 🎯 KEY: Watch for user scrolling up to dismiss constellation
-        let scrollHandler = function () {
-          if (window.scrollY < document.body.scrollHeight - window.innerHeight - 50) {
-            // User is scrolling up - dismiss constellation with smooth fade
-            dismissPermanentConstellation();
-            window.removeEventListener('scroll', scrollHandler);
-            window.removeEventListener('wheel', wheelHandler);
-            window.removeEventListener('touchmove', touchHandler);
-          }
-        };
+        // Watch for user scrolling up to dismiss constellation
+        // Require accumulated intent to avoid accidental dismisses
+        let wheelAccum = 0;
+        let touchAccum = 0;
+        const DISMISS_THRESHOLD = 60; // Pixels of upward scroll needed
+
+        function dismissAndCleanup() {
+          dismissPermanentConstellation();
+          window.removeEventListener('wheel', wheelHandler);
+          window.removeEventListener('touchstart', touchStartHandler);
+          window.removeEventListener('touchmove', touchHandler);
+        }
 
         let wheelHandler = function (e) {
-          if (e.deltaY < 0) { // Scrolling up
-            dismissPermanentConstellation();
-            window.removeEventListener('scroll', scrollHandler);
-            window.removeEventListener('wheel', wheelHandler);
-            window.removeEventListener('touchmove', touchHandler);
+          if (e.deltaY < 0) {
+            wheelAccum += Math.abs(e.deltaY);
+            if (wheelAccum >= DISMISS_THRESHOLD) {
+              dismissAndCleanup();
+            }
+          } else {
+            wheelAccum = 0; // Reset if user scrolls down
           }
         };
 
         let lastTouchY = 0;
+        let touchStartHandler = function (e) {
+          lastTouchY = e.touches[0].clientY;
+          touchAccum = 0;
+        };
+
         let touchHandler = function (e) {
           const currentY = e.touches[0].clientY;
-          if (currentY > lastTouchY) { // Finger moving down = scrolling up
-            dismissPermanentConstellation();
-            window.removeEventListener('scroll', scrollHandler);
-            window.removeEventListener('wheel', wheelHandler);
-            window.removeEventListener('touchmove', touchHandler);
+          const delta = currentY - lastTouchY;
+          if (delta > 0) { // Finger moving down = scrolling up
+            touchAccum += delta;
+            if (touchAccum >= DISMISS_THRESHOLD) {
+              dismissAndCleanup();
+            }
+          } else {
+            touchAccum = 0;
           }
           lastTouchY = currentY;
         };
 
-        // Add listeners after a short delay (so accidental scroll doesn't trigger)
+        // Add listeners after a short delay
         setTimeout(() => {
-          window.addEventListener('scroll', scrollHandler);
-          window.addEventListener('wheel', wheelHandler);
-          window.addEventListener('touchmove', touchHandler);
+          window.addEventListener('wheel', wheelHandler, { passive: true });
+          window.addEventListener('touchstart', touchStartHandler, { passive: true });
+          window.addEventListener('touchmove', touchHandler, { passive: true });
         }, 2000);
       };
 
@@ -3819,13 +3831,9 @@ Happy Girlfriend Day, mentosss. I love you — ass tujhi and all. 😄❤️`;
         document.body.style.overflow = '';
         document.body.style.width = '';
 
-        // Smooth scroll to secret section (the last section)
+        // Clean up after overlay fades — do NOT force scroll back
+        // Respect the user's scroll direction (they scrolled up to dismiss)
         setTimeout(() => {
-          const secretSection = document.getElementById('secret');
-          if (secretSection) {
-            smoothScrollTo(secretSection, 2500);
-          }
-          // Clean up
           document.querySelectorAll('.star-label').forEach(l => l.remove());
           overlay.style.transition = '';
 
