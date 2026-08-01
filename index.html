@@ -1634,28 +1634,122 @@
       opacity: .85;
     }
 
-    .carousel-btns {
+    /* ============ APPLE-INSPIRED GALLERY DOTS ============ */
+    .gallery-dots-wrap {
+      margin-top: 32px;
       display: flex;
-      gap: 20px;
-      margin-top: 20px;
+      justify-content: center;
+      align-items: center;
     }
 
-    .carousel-btns button {
-      width: 44px;
-      height: 44px;
+    .gallery-dots {
+      display: flex;
+      gap: 10px;
+      align-items: center;
+      justify-content: center;
+      padding: 10px 18px;
+      background: linear-gradient(135deg,
+          rgba(255, 255, 255, 0.5) 0%,
+          rgba(255, 220, 235, 0.4) 100%);
+      backdrop-filter: blur(20px) saturate(180%);
+      -webkit-backdrop-filter: blur(20px) saturate(180%);
+      border-radius: 100px;
+      border: 1px solid rgba(255, 255, 255, 0.6);
+      box-shadow:
+        0 8px 32px rgba(255, 111, 165, 0.15),
+        0 2px 8px rgba(150, 50, 90, 0.1),
+        inset 0 1px 1px rgba(255, 255, 255, 0.8);
+      position: relative;
+      overflow: hidden;
+    }
+
+    /* Subtle inner glow layer */
+    .gallery-dots::before {
+      content: '';
+      position: absolute;
+      inset: 0;
+      background: radial-gradient(ellipse at center,
+          rgba(255, 182, 193, 0.15) 0%,
+          transparent 70%);
+      pointer-events: none;
+      border-radius: inherit;
+    }
+
+    .gallery-dot {
+      width: 8px;
+      height: 8px;
       border-radius: 50%;
-      border: 2px solid var(--text-dark);
-      background: transparent;
-      color: var(--text-dark);
+      border: none;
+      background: rgba(150, 50, 90, 0.3);
       cursor: pointer;
-      font-size: 16px;
-      transition: .3s;
+      transition:
+        width 0.6s cubic-bezier(0.34, 1.56, 0.64, 1),
+        height 0.5s cubic-bezier(0.16, 1, 0.3, 1),
+        background 0.5s ease,
+        box-shadow 0.5s ease,
+        transform 0.4s cubic-bezier(0.16, 1, 0.3, 1);
+      padding: 0;
+      position: relative;
+      z-index: 1;
     }
 
-    .carousel-btns button:hover {
-      background: var(--romance1);
-      color: #fff;
-      border-color: var(--romance1);
+    .gallery-dot:hover:not(.active) {
+      background: rgba(255, 111, 165, 0.6);
+      transform: scale(1.3);
+    }
+
+    .gallery-dot.active {
+      width: 28px;
+      background: linear-gradient(90deg, #ff6fa5, #ff9ec7);
+      border-radius: 6px;
+      box-shadow:
+        0 0 12px rgba(255, 111, 165, 0.6),
+        0 0 24px rgba(255, 111, 165, 0.3),
+        inset 0 1px 2px rgba(255, 255, 255, 0.4);
+    }
+
+    /* Soft breathing glow on active dot */
+    .gallery-dot.active::after {
+      content: '';
+      position: absolute;
+      inset: -2px;
+      border-radius: inherit;
+      background: linear-gradient(90deg, #ff6fa5, #ff9ec7);
+      opacity: 0;
+      filter: blur(6px);
+      z-index: -1;
+      animation: dotBreathe 2.5s ease-in-out infinite;
+    }
+
+    @keyframes dotBreathe {
+
+      0%,
+      100% {
+        opacity: 0.4;
+        transform: scale(1);
+      }
+
+      50% {
+        opacity: 0.7;
+        transform: scale(1.15);
+      }
+    }
+
+    /* Mobile — slightly smaller for compact feel */
+    @media (max-width: 600px) {
+      .gallery-dots {
+        padding: 8px 14px;
+        gap: 8px;
+      }
+
+      .gallery-dot {
+        width: 7px;
+        height: 7px;
+      }
+
+      .gallery-dot.active {
+        width: 24px;
+      }
     }
 
     .letter-box {
@@ -2614,9 +2708,8 @@
 
         </div>
       </div>
-      <div class="carousel-btns reveal">
-        <button id="prevBtn">←</button>
-        <button id="nextBtn">→</button>
+      <div class="gallery-dots-wrap reveal">
+        <div class="gallery-dots" id="galleryDots"></div>
       </div>
     </div>
   </section>
@@ -3533,7 +3626,6 @@ Happy Girlfriend Day, Kalu. I love you.`;
 
         if (card._videoNode) {
           if (offset === 0) {
-            // Play video only if gallery is visible
             if (galleryVisible) {
               card._videoNode.play().catch(() => { });
             }
@@ -3542,11 +3634,39 @@ Happy Girlfriend Day, Kalu. I love you.`;
           }
         }
       });
-    }
-    updateCarousel();
-    document.getElementById('nextBtn').addEventListener('click', () => { active = (active + 1) % cards.length; updateCarousel(); });
-    document.getElementById('prevBtn').addEventListener('click', () => { active = (active - 1 + cards.length) % cards.length; updateCarousel(); });
 
+      // Update dot indicators (safely — dots may not exist on first call)
+      if (typeof updateGalleryDots === 'function') {
+        updateGalleryDots();
+      }
+    }
+    // Gallery dots state — declared BEFORE first updateCarousel() call to avoid TDZ error
+    let galleryDots = [];
+
+    function updateGalleryDots() {
+      galleryDots.forEach((dot, i) => {
+        dot.classList.toggle('active', i === active);
+      });
+    }
+
+    updateCarousel();
+
+    // Build dot indicators dynamically
+    const galleryDotsContainer = document.getElementById('galleryDots');
+    for (let i = 0; i < cards.length; i++) {
+      const dot = document.createElement('button');
+      dot.className = 'gallery-dot';
+      dot.setAttribute('aria-label', `Go to gallery item ${i + 1}`);
+      dot.addEventListener('click', () => {
+        active = i;
+        updateCarousel();
+        stopAutoRotate();
+        startAutoRotate();
+      });
+      galleryDotsContainer.appendChild(dot);
+      galleryDots.push(dot);
+    }
+    updateGalleryDots();
     /* ---------- Carousel touch/swipe support ---------- */
     let touchStartX = 0;
     let touchStartY = 0;
@@ -3671,13 +3791,13 @@ Happy Girlfriend Day, Kalu. I love you.`;
       });
     }, { threshold: 0.5 }).observe(document.getElementById('gallery'));
 
-    // Reset timer on manual navigation
-    ['prevBtn', 'nextBtn'].forEach(id => {
-      document.getElementById(id).addEventListener('click', () => {
-        stopAutoRotate();
-        startAutoRotate();
-      });
-    });
+    // // Reset timer on manual navigation
+    // ['prevBtn', 'nextBtn'].forEach(id => {
+    //   document.getElementById(id).addEventListener('click', () => {
+    //     stopAutoRotate();
+    //     startAutoRotate();
+    //   });
+    // });
 
     /* ---------- Cinema card overlay ---------- */
     document.getElementById('openCardBtn').addEventListener('click', () => document.getElementById('cardOverlay').classList.add('show'));
