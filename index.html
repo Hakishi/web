@@ -45,8 +45,9 @@
       padding: 0;
     }
 
-    /* Hide fullscreen button when constellation is open */
-    body.constellation-open #fullscreenBtn {
+    /* Hide fullscreen button when constellation is open OR permanent */
+    body.constellation-open #fullscreenBtn,
+    body.constellation-permanent #fullscreenBtn {
       display: none;
     }
 
@@ -83,10 +84,22 @@
 
     html {
       scroll-behavior: smooth;
-      scroll-snap-type: y mandatory;
-      scroll-snap-stop: normal;
       -webkit-overflow-scrolling: touch;
-      overscroll-behavior-y: contain;
+      overscroll-behavior-y: none;
+      scrollbar-width: none;
+      -ms-overflow-style: none;
+    }
+
+    /* Hide scrollbar in webkit browsers (Chrome/Safari/Edge) */
+    ::-webkit-scrollbar {
+      width: 0;
+      height: 0;
+      background: transparent;
+    }
+
+    body {
+      scrollbar-width: none;
+      -ms-overflow-style: none;
     }
 
     /* Better touch handling on mobile */
@@ -3244,18 +3257,59 @@
     musicBtn.addEventListener('click', () => {
       hideTapPrompt();
 
-      // If post-constellation audio is active, control THAT instead
+      // Post-constellation audio behavior:
+      // - If playing → pause
+      // - If paused → forget hope-2 and switch to current section's music
       if (postConstActive && window.postConstAudio) {
-        if (window.postConstAudio.paused) {
-          window.postConstAudio.play().catch(() => { });
-          musicBtn.classList.add('playing');
-        } else {
+        if (!window.postConstAudio.paused) {
+          // Currently playing — just pause
           window.postConstAudio.pause();
           musicBtn.classList.remove('playing');
+        } else {
+          // Currently paused — abandon hope-2 and switch to current section's music
+          try {
+            window.postConstAudio.pause();
+            window.postConstAudio.onended = null;
+            window.postConstAudio = null;
+          } catch (e) { }
+          postConstActive = false;
+
+          // Find current section based on viewport
+          const viewportCenter = window.scrollY + window.innerHeight / 2;
+          let currentSection = null;
+          document.querySelectorAll('.section').forEach(sec => {
+            const top = sec.offsetTop;
+            const bottom = top + sec.offsetHeight;
+            if (viewportCenter >= top && viewportCenter <= bottom) {
+              currentSection = sec;
+            }
+          });
+
+          // Get track for current section (or fallback to hero)
+          const sectionId = currentSection ? currentSection.id : 'hero';
+          const newTrack = resolveTrack(sectionId);
+
+          if (newTrack) {
+            try {
+              activeAudio.pause();
+              activeAudio.src = newTrack;
+              activeAudio.loop = true;
+              activeAudio.volume = 1;
+              activeAudio.currentTime = 0;
+              currentTrack = newTrack;
+              musicEnabled = true;
+              activeAudio.play().then(() => {
+                musicBtn.classList.add('playing');
+              }).catch(() => {
+                musicBtn.classList.add('playing');
+              });
+            } catch (e) { }
+          }
         }
         return;
       }
 
+      // Normal music toggle behavior
       if (musicEnabled) {
         musicEnabled = false;
         activeAudio.pause();
@@ -3764,6 +3818,7 @@ Happy Girlfriend Day, mentosss. I love you — ass tujhi and all. 😄❤️`;
 
         overlay.classList.remove('closing');
         overlay.classList.add('show');
+        document.body.classList.add('constellation-permanent');
 
         // Hide the close button and controls for final view
         document.getElementById('cCloseBtn').style.display = 'none';
@@ -3821,27 +3876,27 @@ Happy Girlfriend Day, mentosss. I love you — ass tujhi and all. 😄❤️`;
         showStarLabels();
         document.getElementById('cFinalText').classList.add('show');
 
-        // Watch for user scrolling up to dismiss constellation
-        // Require accumulated intent to avoid accidental dismisses
+        // Watch for any user interaction to dismiss constellation
+        // - Scroll (any direction) with accumulated intent
+        // - Click / tap
         let wheelAccum = 0;
         let touchAccum = 0;
-        const DISMISS_THRESHOLD = 60; // Pixels of upward scroll needed
+        const DISMISS_THRESHOLD = 60;
 
         function dismissAndCleanup() {
           dismissPermanentConstellation();
           window.removeEventListener('wheel', wheelHandler);
           window.removeEventListener('touchstart', touchStartHandler);
           window.removeEventListener('touchmove', touchHandler);
+          window.removeEventListener('click', clickHandler);
+          window.removeEventListener('keydown', keyHandler);
         }
 
         let wheelHandler = function (e) {
-          if (e.deltaY < 0) {
-            wheelAccum += Math.abs(e.deltaY);
-            if (wheelAccum >= DISMISS_THRESHOLD) {
-              dismissAndCleanup();
-            }
-          } else {
-            wheelAccum = 0; // Reset if user scrolls down
+          // Dismiss on scroll in ANY direction (up or down)
+          wheelAccum += Math.abs(e.deltaY);
+          if (wheelAccum >= DISMISS_THRESHOLD) {
+            dismissAndCleanup();
           }
         };
 
@@ -3853,23 +3908,33 @@ Happy Girlfriend Day, mentosss. I love you — ass tujhi and all. 😄❤️`;
 
         let touchHandler = function (e) {
           const currentY = e.touches[0].clientY;
-          const delta = currentY - lastTouchY;
-          if (delta > 0) { // Finger moving down = scrolling up
-            touchAccum += delta;
-            if (touchAccum >= DISMISS_THRESHOLD) {
-              dismissAndCleanup();
-            }
-          } else {
-            touchAccum = 0;
+          const delta = Math.abs(currentY - lastTouchY);
+          // Dismiss on swipe in ANY direction
+          touchAccum += delta;
+          if (touchAccum >= DISMISS_THRESHOLD) {
+            dismissAndCleanup();
           }
           lastTouchY = currentY;
         };
 
-        // Add listeners after a short delay
+        let clickHandler = function (e) {
+          // Ignore clicks on the info panel or close button (in case they're visible)
+          if (e.target.closest('.const-info-panel')) return;
+          dismissAndCleanup();
+        };
+
+        let keyHandler = function (e) {
+          // Any key press dismisses
+          dismissAndCleanup();
+        };
+
+        // Add listeners after a short delay so accidental interaction doesn't trigger
         setTimeout(() => {
           window.addEventListener('wheel', wheelHandler, { passive: true });
           window.addEventListener('touchstart', touchStartHandler, { passive: true });
           window.addEventListener('touchmove', touchHandler, { passive: true });
+          window.addEventListener('click', clickHandler);
+          window.addEventListener('keydown', keyHandler);
         }, 2000);
       };
 
@@ -3882,6 +3947,7 @@ Happy Girlfriend Day, mentosss. I love you — ass tujhi and all. 😄❤️`;
 
         // Restore body styles immediately                    
         document.body.classList.remove('constellation-open');
+        document.body.classList.remove('constellation-permanent');
         document.body.style.top = '';
         document.body.style.position = '';
         document.body.style.overflow = '';
@@ -4928,6 +4994,32 @@ Happy Girlfriend Day, mentosss. I love you — ass tujhi and all. 😄❤️`;
       window.showConstellationSurprise = function () {
         savedScrollPos = window.scrollY;
 
+        // Stop main site's parallax loop to save CPU for constellation
+        if (typeof stopParallaxLoop === 'function') stopParallaxLoop();
+
+        // Fade out postConstAudio if it's playing (from previous dismiss)
+        if (typeof postConstActive !== 'undefined' && postConstActive && window.postConstAudio) {
+          try {
+            const pcStartVol = window.postConstAudio.volume || 1;
+            let pcFadeStep = 0;
+            const pcFadeOut = setInterval(() => {
+              pcFadeStep++;
+              if (window.postConstAudio) {
+                window.postConstAudio.volume = Math.max(0, pcStartVol - (pcFadeStep * 0.1));
+              }
+              if (pcFadeStep >= 10) {
+                clearInterval(pcFadeOut);
+                if (window.postConstAudio) {
+                  window.postConstAudio.pause();
+                  window.postConstAudio.onended = null; // Remove end handler
+                }
+                postConstActive = false;
+                window.postConstAudio = null;
+              }
+            }, 30);
+          } catch (e) { }
+        }
+
         // Fade out main music smoothly
         if (typeof musicEnabled !== 'undefined' && musicEnabled && typeof activeAudio !== 'undefined' && activeAudio) {
           wasMusicPlaying = true;
@@ -4961,6 +5053,11 @@ Happy Girlfriend Day, mentosss. I love you — ass tujhi and all. 😄❤️`;
         document.getElementById('cSpeedUp').classList.remove('active');
         document.getElementById('cSpeedUp').textContent = '⏩';
 
+        // Restore close button and top controls (may have been hidden by previous permanent view)
+        document.getElementById('cCloseBtn').style.display = '';
+        document.querySelector('.const-top-controls').style.display = '';
+        document.getElementById('cCloseBtn').classList.remove('show'); // Will re-show after animation
+
         displayConstellationInfo();
         layoutStars();
 
@@ -4968,6 +5065,9 @@ Happy Girlfriend Day, mentosss. I love you — ass tujhi and all. 😄❤️`;
         overlay.classList.add('show');
         animationRunning = true;
         frameCount = 0;
+        animationRunning = true;
+        frameCount = 0;
+        savedConstellationState = null; // Reset saved state for fresh animation
 
         // Start music IMMEDIATELY as transition begins
         initAudio();
