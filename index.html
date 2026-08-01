@@ -1241,9 +1241,9 @@
       position: absolute;
       left: 7.5%;
       top: 73.3%;
-      transform: translate(-50%, -50%);
       font-size: 22px;
       filter: drop-shadow(0 3px 6px rgba(0, 0, 0, .4));
+      will-change: left, top;
     }
 
     .map-label {
@@ -3160,13 +3160,38 @@
     const mapMarker = document.getElementById('mapMarker');
     let mapAnimated = false;
     function animateMarker(duration = 2200) {
-      const P0 = { x: 7.5, y: 73.3 }, P1 = { x: 50, y: 6.7 }, P2 = { x: 92.5, y: 73.3 };
+      // Control points follow the SVG path: "M30,110 Q200,10 370,110"
+      // SVG viewBox is "0 0 400 150"
+      // Convert SVG coords to percentages:
+      // Start:  x=30/400=7.5%,  y=110/150=73.3%
+      // Peak:   x=200/400=50%,  y=10/150=6.7%
+      // End:    x=370/400=92.5%, y=110/150=73.3%
+      const P0 = { x: 7.5, y: 73.3 };
+      const P1 = { x: 50, y: 6.7 };
+      const P2 = { x: 92.5, y: 73.3 };
       const start = performance.now();
+
       function frame(now) {
         let t = Math.min((now - start) / duration, 1);
+
+        // Quadratic bezier interpolation
         const x = (1 - t) ** 2 * P0.x + 2 * (1 - t) * t * P1.x + t ** 2 * P2.x;
         const y = (1 - t) ** 2 * P0.y + 2 * (1 - t) * t * P1.y + t ** 2 * P2.y;
-        mapMarker.style.left = x + '%'; mapMarker.style.top = y + '%';
+
+        mapMarker.style.left = x + '%';
+        mapMarker.style.top = y + '%';
+
+        // Tilt the marker emoji in direction of travel
+        if (t > 0 && t < 1) {
+          const tNext = Math.min(t + 0.01, 1);
+          const xNext = (1 - tNext) ** 2 * P0.x + 2 * (1 - tNext) * tNext * P1.x + tNext ** 2 * P2.x;
+          const yNext = (1 - tNext) ** 2 * P0.y + 2 * (1 - tNext) * tNext * P1.y + tNext ** 2 * P2.y;
+          const angle = Math.atan2(yNext - y, xNext - x) * (180 / Math.PI);
+          mapMarker.style.transform = `rotate(${angle}deg)`;
+        } else if (t >= 1) {
+          mapMarker.style.transform = 'rotate(0deg)';
+        }
+
         if (t < 1) requestAnimationFrame(frame);
       }
       requestAnimationFrame(frame);
