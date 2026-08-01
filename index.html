@@ -3469,11 +3469,14 @@ Happy Girlfriend Day, Kalu. I love you.`;
     document.getElementById('closeCardBtn').addEventListener('click', () => document.getElementById('cardOverlay').classList.remove('show'));
 
     /* ---------- Finale confetti + hearts + CONSTELLATION SURPRISE ---------- */
+    let confettiTapCount = 0;
+
     document.getElementById('confettiBtn').addEventListener('click', function () {
       // Prevent double tap / multiple triggers
       if (this.disabled) return;
       this.disabled = true;
-      this.textContent = '✨ Launching...';
+      confettiTapCount++;
+      this.textContent = confettiTapCount === 1 ? '✨ Launching...' : '✨ Here we go again...';
       this.style.opacity = '0.7';
       this.style.transform = 'scale(0.95)';
 
@@ -3747,7 +3750,7 @@ Happy Girlfriend Day, mentosss. I love you — ass tujhi and all. 😄❤️`;
           const confettiBtn = document.getElementById('confettiBtn');
           if (confettiBtn) {
             confettiBtn.disabled = false;
-            confettiBtn.textContent = '🎉 Tap for a Surprise';
+            confettiBtn.textContent = confettiTapCount > 0 ? '🎉 Tap Again' : '🎉 Tap for a Surprise';
             confettiBtn.style.opacity = '';
             confettiBtn.style.transform = '';
           }
@@ -4712,7 +4715,7 @@ Happy Girlfriend Day, mentosss. I love you — ass tujhi and all. 😄❤️`;
           const confettiBtn = document.getElementById('confettiBtn');
           if (confettiBtn) {
             confettiBtn.disabled = false;
-            confettiBtn.textContent = '🎉 Tap for a Surprise';
+            confettiBtn.textContent = confettiTapCount > 0 ? '🎉 Tap Again' : '🎉 Tap for a Surprise';
             confettiBtn.style.opacity = '';
             confettiBtn.style.transform = '';
           }
