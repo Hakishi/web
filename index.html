@@ -809,6 +809,11 @@
       transition: transform 0.6s cubic-bezier(0.16, 1, 0.3, 1), box-shadow 0.6s ease;
     }
 
+    /* Hide border when frame has a successfully loaded image */
+    .photo-frame:has(img) {
+      border: none;
+    }
+
     .photo-frame:hover {
       transform: translateY(-6px) scale(1.02);
       box-shadow: 0 20px 40px rgba(0, 0, 0, 0.3);
@@ -2474,7 +2479,7 @@
     </div>
   </section>
 
-  <!-- 10. CINEMA NIGHT -->
+  <!-- 10. CINEMA DATE -->
   <section id="cinema" class="section cinema-section"
     data-bg-img="https://res.cloudinary.com/khovkitp/image/upload/v1785427111/bg-cinema_pvd3bn.jpg">
     <div class="section-inner" style="max-width:900px;">
@@ -3334,7 +3339,7 @@ From a random match in a game to countless calls, from a whole month of silence 
 
 Somewhere along the way, a dog named Kalu accidentally gave us a nickname that's now the only name that feels right for you. You still randomly call me "mentosss" for no reason,you still never miss a chance to mock me and "ass tujhi" has become a full sentence between us at this point. I wouldn't trade any of it.
 
-That midnight I told you I liked you is still the best decision I've made. Dadar made it real. That smiley octo and the pretty eiffel tower still sit exactly where you'd want them to. That cozy movie night, the bday card kept in mind for two months, and our last summer together before I had to move — every single one of these is a memory I keep replaying.
+That midnight I told you I liked you is still the best decision I've made. Dadar made it real. That smiley octo and the pretty eiffel tower still sit exactly where you'd want them to. Our random travels, siddhivinayak darshan, that cozy movie date, the bday card kept in mind for two months, and our last summer together before I had to move — every single one of these is a memory I keep replaying.
 
 Here's to more matches, more meetups, more memories, and a lot more "us."
 
@@ -4724,37 +4729,32 @@ Happy Girlfriend Day, mentosss. I love you — ass tujhi and all. 😄❤️`;
         document.getElementById('cCloseBtn').classList.remove('show');
         document.querySelector('.const-top-controls').style.opacity = '0';
 
-        // Sync main site's music system with our currently playing track
-        if (typeof activeAudio !== 'undefined' && activeAudio && constAudio) {
-          activeAudio.src = SECRET_SECTION_MUSIC;
-          activeAudio.currentTime = constAudio.currentTime;
+        // Direct audio handoff — no duplicate playback, no restart, no glitch
+        // The constellation audio IS the secret section music, so just tell the
+        // main music system to adopt it as its active audio element.
+        if (typeof activeAudio !== 'undefined' && constAudio) {
+          // Stop the main system's audio elements silently (they're not playing anyway)
+          try {
+            audioA.pause();
+            audioA.src = '';
+            audioB.pause();
+            audioB.src = '';
+          } catch (e) { }
+
+          // Adopt constAudio as the new active audio
+          // Note: We reassign the module-level activeAudio reference
+          activeAudio = constAudio;
+          inactiveAudio = audioA; // Use audioA as the new inactive slot
+
           if (typeof currentTrack !== 'undefined') currentTrack = SECRET_SECTION_MUSIC;
           if (typeof musicEnabled !== 'undefined') musicEnabled = true;
+          if (typeof musicBtn !== 'undefined') musicBtn.classList.add('playing');
 
-          const startVol = constAudio.volume;
-          let fadeStep = 0;
-          const fadeOut = setInterval(() => {
-            fadeStep++;
-            if (constAudio) constAudio.volume = Math.max(0, startVol - (fadeStep * 0.05));
-            if (fadeStep >= 20) {
-              clearInterval(fadeOut);
-              if (constAudio) {
-                constAudio.pause();
-                constAudio = null;
-              }
-            }
-          }, 50);
+          // Ensure it stays at full volume — no fade needed since it never stopped
+          try { activeAudio.volume = 1; } catch (e) { }
 
-          activeAudio.volume = 0;
-          activeAudio.play().then(() => {
-            let vol = 0;
-            const fadeIn = setInterval(() => {
-              vol += 0.05;
-              if (vol >= 1) { vol = 1; clearInterval(fadeIn); }
-              activeAudio.volume = vol;
-            }, 50);
-            if (typeof musicBtn !== 'undefined') musicBtn.classList.add('playing');
-          }).catch(() => { });
+          // Release constAudio reference so IIFE knows main system owns it now
+          constAudio = null;
         } else {
           if (constAudio) {
             constAudio.pause();
