@@ -12,6 +12,18 @@
     href="https://fonts.googleapis.com/css2?family=Orbitron:wght@500;700;900&family=Poppins:wght@300;400;500;600;700&family=Dancing+Script:wght@600;700&family=Cormorant+Garamond:ital,wght@0,400;0,600;1,400&display=swap"
     rel="stylesheet">
   <style>
+    /* ========== MEDIA PROTECTION CSS ========== */
+
+    img,
+    video {
+      -webkit-user-select: none;
+      -moz-user-select: none;
+      -ms-user-select: none;
+      user-select: none;
+      -webkit-user-drag: none;
+      -webkit-touch-callout: none;
+    }
+
     /* Smoother easing for all transitions */
     * {
       transition-timing-function: cubic-bezier(0.16, 1, 0.3, 1);
@@ -2856,6 +2868,72 @@
         bar.style.width = progress + '%'; pct.textContent = Math.floor(progress) + '%';
       }, 200);
     });
+
+    (function () {
+      'use strict';
+
+      // ——————————————————————————
+      // 1. DISABLE RIGHT-CLICK ON ENTIRE PAGE
+      // ——————————————————————————
+      document.addEventListener('contextmenu', function (e) {
+        e.preventDefault();
+      });
+
+      // ——————————————————————————
+      // 2. BLOCK IMAGE DRAG
+      // ——————————————————————————
+      document.addEventListener('dragstart', function (e) {
+        if (e.target.tagName === 'IMG') {
+          e.preventDefault();
+        }
+      });
+
+      // ——————————————————————————
+      // 3. BLOCK KEYBOARD SHORTCUTS
+      // ——————————————————————————
+      document.addEventListener('keydown', function (e) {
+        // Ctrl+S (Save)
+        if (e.ctrlKey && e.key === 's') {
+          e.preventDefault();
+        }
+        // Ctrl+U (View Source)
+        if (e.ctrlKey && e.key === 'u') {
+          e.preventDefault();
+        }
+        // Ctrl+Shift+I (DevTools)
+        if (e.ctrlKey && e.shiftKey && e.key === 'I') {
+          e.preventDefault();
+        }
+        // Ctrl+Shift+C (Inspect Element)
+        if (e.ctrlKey && e.shiftKey && e.key === 'C') {
+          e.preventDefault();
+        }
+        // Ctrl+Shift+J (Console)
+        if (e.ctrlKey && e.shiftKey && e.key === 'J') {
+          e.preventDefault();
+        }
+        // F12 (DevTools)
+        if (e.key === 'F12') {
+          e.preventDefault();
+        }
+      });
+
+      // ——————————————————————————
+      // 4. PROTECT ALL IMAGES
+      // ——————————————————————————
+      document.querySelectorAll('img').forEach(function (img) {
+        img.setAttribute('draggable', 'false');
+      });
+
+      // ——————————————————————————
+      // 5. PROTECT ALL VIDEOS
+      // ——————————————————————————
+      document.querySelectorAll('video').forEach(function (video) {
+        video.setAttribute('controlsList', 'nodownload noremoteplayback');
+        video.setAttribute('disablePictureInPicture', '');
+      });
+
+    })();
 
     /* ---------- Custom heart cursor (pointer replacement) ---------- */
     if (matchMedia('(pointer:fine)').matches) {
