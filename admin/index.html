@@ -2,176 +2,1309 @@
 <html lang="en">
 <head>
 <meta charset="UTF-8">
-<title>Visitor Dashboard</title>
-<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Visitor Analytics</title>
+<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="theme-color" content="#000000">
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap" rel="stylesheet">
 <style>
-  * { margin: 0; padding: 0; box-sizing: border-box; font-family: 'Segoe UI', Arial, sans-serif; }
-  body { background: #0f172a; color: #e2e8f0; padding: 20px; min-height: 100vh; cursor: default; }
-  h1 { color: #38bdf8; margin-bottom: 20px; }
-  
-  /* Login Screen */
-  .login-box { max-width: 400px; margin: 100px auto; background: #1e293b; padding: 40px; border-radius: 12px; box-shadow: 0 10px 30px rgba(0,0,0,0.3); }
-  .login-box input { width: 100%; padding: 12px; margin: 10px 0; background: #0f172a; border: 1px solid #334155; color: #fff; border-radius: 6px; font-size: 16px; }
-  .login-box button { width: 100%; padding: 12px; background: #38bdf8; color: #0f172a; border: none; border-radius: 6px; font-size: 16px; font-weight: bold; cursor: pointer; margin-top: 10px; transition: background 0.3s; }
-  .login-box button:hover { background: #0ea5e9; }
-  
-  /* Dashboard */
+  * {
+    margin: 0;
+    padding: 0;
+    box-sizing: border-box;
+    -webkit-tap-highlight-color: transparent;
+  }
+
+  :root, [data-theme="dark"] {
+    --bg-primary: #000000;
+    --bg-secondary: #0a0a0f;
+    --glass-bg: rgba(255, 255, 255, 0.05);
+    --glass-border: rgba(255, 255, 255, 0.1);
+    --glass-hover: rgba(255, 255, 255, 0.08);
+    --text-primary: #f5f5f7;
+    --text-secondary: #a1a1a6;
+    --text-tertiary: #6e6e73;
+    --accent: #0a84ff;
+    --accent-glow: rgba(10, 132, 255, 0.4);
+    --success: #30d158;
+    --danger: #ff453a;
+    --warning: #ff9f0a;
+    --warning-glow: rgba(255, 159, 10, 0.4);
+    --purple: #bf5af2;
+    --input-bg: rgba(255, 255, 255, 0.06);
+    --header-bg: rgba(0, 0, 0, 0.4);
+    --card-inner-bg: rgba(255, 255, 255, 0.03);
+    --card-inner-border: rgba(255, 255, 255, 0.05);
+    --modal-overlay: rgba(0, 0, 0, 0.75);
+    --modal-bg: rgba(28, 28, 30, 0.85);
+    --shadow-main: 0 8px 32px rgba(0, 0, 0, 0.4);
+    --gradient-1: rgba(10, 132, 255, 0.15);
+    --gradient-2: rgba(191, 90, 242, 0.12);
+    --gradient-3: rgba(48, 209, 88, 0.08);
+    --gradient-4: rgba(255, 159, 10, 0.08);
+  }
+
+  [data-theme="light"] {
+    --bg-primary: #f2f2f7;
+    --bg-secondary: #ffffff;
+    --glass-bg: rgba(255, 255, 255, 0.7);
+    --glass-border: rgba(0, 0, 0, 0.08);
+    --glass-hover: rgba(255, 255, 255, 0.85);
+    --text-primary: #1d1d1f;
+    --text-secondary: #515154;
+    --text-tertiary: #86868b;
+    --accent: #007aff;
+    --accent-glow: rgba(0, 122, 255, 0.3);
+    --success: #34c759;
+    --danger: #ff3b30;
+    --warning: #ff9500;
+    --warning-glow: rgba(255, 149, 0, 0.3);
+    --purple: #af52de;
+    --input-bg: rgba(0, 0, 0, 0.04);
+    --header-bg: rgba(255, 255, 255, 0.85);
+    --card-inner-bg: rgba(0, 0, 0, 0.02);
+    --card-inner-border: rgba(0, 0, 0, 0.05);
+    --modal-overlay: rgba(0, 0, 0, 0.4);
+    --modal-bg: rgba(250, 250, 252, 0.9);
+    --shadow-main: 0 8px 32px rgba(0, 0, 0, 0.1);
+    --gradient-1: rgba(0, 122, 255, 0.12);
+    --gradient-2: rgba(175, 82, 222, 0.1);
+    --gradient-3: rgba(52, 199, 89, 0.08);
+    --gradient-4: rgba(255, 149, 0, 0.08);
+  }
+
+  html, body {
+    font-family: 'Inter', -apple-system, BlinkMacSystemFont, 'SF Pro Display', sans-serif;
+    background: var(--bg-primary);
+    color: var(--text-primary);
+    min-height: 100vh;
+    overflow-x: hidden;
+    -webkit-font-smoothing: antialiased;
+    -moz-osx-font-smoothing: grayscale;
+    transition: background-color 0.4s ease, color 0.4s ease;
+  }
+
+  body.modal-open { overflow: hidden; }
+
+  body::before {
+    content: '';
+    position: fixed;
+    inset: 0;
+    background:
+      radial-gradient(ellipse 80% 60% at 20% 10%, var(--gradient-1), transparent 60%),
+      radial-gradient(ellipse 70% 50% at 80% 20%, var(--gradient-2), transparent 60%),
+      radial-gradient(ellipse 60% 50% at 30% 90%, var(--gradient-3), transparent 60%),
+      radial-gradient(ellipse 70% 60% at 90% 80%, var(--gradient-4), transparent 60%);
+    z-index: -1;
+    pointer-events: none;
+    transition: background 0.5s ease;
+  }
+
+  .container {
+    max-width: 1400px;
+    margin: 0 auto;
+    padding: 24px;
+  }
+
+  .glass {
+    background: var(--glass-bg);
+    backdrop-filter: blur(20px) saturate(180%);
+    -webkit-backdrop-filter: blur(20px) saturate(180%);
+    border: 1px solid var(--glass-border);
+    border-radius: 24px;
+    box-shadow: var(--shadow-main);
+    will-change: transform;
+    transition: transform 0.25s cubic-bezier(0.22, 1, 0.36, 1),
+                background 0.25s ease,
+                border-color 0.25s ease;
+  }
+
+  .login-screen {
+    min-height: 100vh;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    padding: 20px;
+    opacity: 0;
+    animation: fadeIn 0.5s ease forwards;
+  }
+
+  @keyframes fadeIn {
+    to { opacity: 1; }
+  }
+
+  .login-box {
+    width: 100%;
+    max-width: 400px;
+    padding: 48px 36px;
+    opacity: 0;
+    transform: translateY(20px) scale(0.95);
+    animation: loginIn 0.6s cubic-bezier(0.22, 1, 0.36, 1) 0.1s forwards;
+  }
+
+  @keyframes loginIn {
+    to { opacity: 1; transform: translateY(0) scale(1); }
+  }
+
+  .login-icon {
+    width: 72px;
+    height: 72px;
+    margin: 0 auto 24px;
+    background: linear-gradient(135deg, var(--accent), var(--purple));
+    border-radius: 20px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 32px;
+    box-shadow: 0 12px 32px var(--accent-glow);
+    will-change: transform;
+    animation: floatY 3s ease-in-out infinite;
+  }
+
+  @keyframes floatY {
+    0%, 100% { transform: translate3d(0, 0, 0); }
+    50% { transform: translate3d(0, -6px, 0); }
+  }
+
+  .login-box h1 {
+    text-align: center;
+    font-size: 28px;
+    font-weight: 700;
+    letter-spacing: -0.5px;
+    margin-bottom: 8px;
+  }
+
+  .login-box p {
+    text-align: center;
+    color: var(--text-secondary);
+    font-size: 14px;
+    margin-bottom: 32px;
+  }
+
+  .input-field {
+    width: 100%;
+    padding: 16px 20px;
+    background: var(--input-bg);
+    border: 1px solid var(--glass-border);
+    color: var(--text-primary);
+    border-radius: 14px;
+    font-size: 16px;
+    font-family: inherit;
+    outline: none;
+    transition: background-color 0.2s ease, border-color 0.2s ease, box-shadow 0.2s ease;
+  }
+
+  .input-field:focus {
+    background: var(--glass-hover);
+    border-color: var(--accent);
+    box-shadow: 0 0 0 4px var(--accent-glow);
+  }
+
+  .btn {
+    padding: 14px 24px;
+    border: none;
+    border-radius: 14px;
+    font-size: 15px;
+    font-weight: 600;
+    font-family: inherit;
+    cursor: pointer;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    gap: 8px;
+    letter-spacing: -0.2px;
+    will-change: transform;
+    transition: transform 0.2s cubic-bezier(0.22, 1, 0.36, 1),
+                background-color 0.2s ease,
+                box-shadow 0.2s ease;
+  }
+
+  .btn:active { transform: scale(0.96); }
+
+  .btn-primary {
+    background: linear-gradient(135deg, var(--accent), color-mix(in srgb, var(--accent) 70%, #000));
+    color: white;
+    box-shadow: 0 4px 16px var(--accent-glow);
+  }
+
+  .btn-primary:hover {
+    transform: translate3d(0, -2px, 0);
+    box-shadow: 0 8px 24px var(--accent-glow);
+  }
+
+  .btn-secondary {
+    background: var(--input-bg);
+    color: var(--text-primary);
+    border: 1px solid var(--glass-border);
+  }
+
+  .btn-secondary:hover {
+    background: var(--glass-hover);
+    transform: translate3d(0, -2px, 0);
+  }
+
+  .btn-danger {
+    background: color-mix(in srgb, var(--danger) 15%, transparent);
+    color: var(--danger);
+    border: 1px solid color-mix(in srgb, var(--danger) 30%, transparent);
+  }
+
+  .btn-danger:hover {
+    background: color-mix(in srgb, var(--danger) 25%, transparent);
+    transform: translate3d(0, -2px, 0);
+  }
+
+  .login-box .btn { width: 100%; margin-top: 16px; }
+  .error {
+    color: var(--danger);
+    text-align: center;
+    margin-top: 16px;
+    font-size: 13px;
+    font-weight: 500;
+    min-height: 18px;
+  }
+
   .dashboard { display: none; }
-  
-  /* Stats Cards */
-  .stats-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)); gap: 15px; margin-bottom: 30px; }
-  .stat-card { background: #1e293b; padding: 20px; border-radius: 10px; border-left: 4px solid #38bdf8; transition: transform 0.3s; }
-  .stat-card:hover { transform: translateY(-3px); }
-  .stat-card h3 { font-size: 14px; color: #94a3b8; margin-bottom: 8px; text-transform: uppercase; letter-spacing: 1px; }
-  .stat-card .value { font-size: 28px; font-weight: bold; color: #f1f5f9; }
-  
-  /* Controls */
-  .controls { display: flex; gap: 10px; margin-bottom: 20px; flex-wrap: wrap; }
-  .controls input, .controls button { padding: 10px 14px; background: #1e293b; border: 1px solid #334155; color: #fff; border-radius: 6px; font-size: 14px; }
-  .controls input { flex: 1; min-width: 200px; }
-  .controls button { background: #38bdf8; color: #0f172a; cursor: pointer; font-weight: bold; border: none; transition: background 0.3s; }
-  .controls button:hover { background: #0ea5e9; }
-  .controls button.logout { background: #ef4444; color: #fff; }
-  .controls button.logout:hover { background: #dc2626; }
-  
-  /* Table */
-  .table-wrapper { background: #1e293b; border-radius: 10px; overflow: auto; max-height: 600px; }
-  table { width: 100%; border-collapse: collapse; font-size: 13px; }
-  th { background: #334155; padding: 12px 10px; text-align: left; position: sticky; top: 0; color: #38bdf8; font-weight: 600; letter-spacing: 0.5px; }
-  td { padding: 10px; border-bottom: 1px solid #334155; }
-  tr:hover td { background: #263449; }
-  
-  /* Badges */
-  .badge { padding: 3px 8px; border-radius: 4px; font-size: 11px; font-weight: bold; display: inline-block; }
-  .badge-mobile { background: #10b981; color: #fff; }
-  .badge-desktop { background: #3b82f6; color: #fff; }
-  
-  /* Charts */
-  .charts { display: grid; grid-template-columns: 1fr 1fr 1fr; gap: 20px; margin-bottom: 30px; }
-  .chart-box { background: #1e293b; padding: 20px; border-radius: 10px; }
-  .chart-box h3 { color: #38bdf8; margin-bottom: 15px; font-size: 16px; }
-  .bar-item { margin: 8px 0; }
-  .bar-label { display: flex; justify-content: space-between; margin-bottom: 4px; font-size: 13px; }
-  .bar-bg { background: #0f172a; height: 20px; border-radius: 4px; overflow: hidden; }
-  .bar-fill { background: linear-gradient(90deg, #38bdf8, #0ea5e9); height: 100%; transition: width 0.5s; }
-  .no-data { color: #64748b; font-size: 13px; text-align: center; padding: 20px 0; }
-  
-  /* Error message */
-  .error { color: #ef4444; text-align: center; margin-top: 10px; font-size: 14px; }
-  
-  /* Location link */
-  .location-link { color: #38bdf8; text-decoration: none; transition: color 0.3s; }
-  .location-link:hover { color: #0ea5e9; text-decoration: underline; }
-  
-  /* Loading */
-  .loading { text-align: center; padding: 40px; color: #64748b; }
-  
-  /* Responsive */
-  @media (max-width: 1024px) { .charts { grid-template-columns: 1fr 1fr; } }
-  @media (max-width: 768px) { 
-    .charts { grid-template-columns: 1fr; }
-    body { padding: 10px; }
-    .stat-card .value { font-size: 22px; }
+  .dashboard.active {
+    display: block;
+    opacity: 0;
+    animation: fadeIn 0.4s ease forwards;
+  }
+
+  .header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    margin-bottom: 32px;
+    flex-wrap: wrap;
+    gap: 16px;
+  }
+
+  .header-title {
+    display: flex;
+    align-items: center;
+    gap: 14px;
+  }
+
+  .header-logo {
+    width: 44px;
+    height: 44px;
+    background: linear-gradient(135deg, var(--accent), var(--purple));
+    border-radius: 12px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 22px;
+    box-shadow: 0 4px 16px var(--accent-glow);
+  }
+
+  .header h1 {
+    font-size: 26px;
+    font-weight: 700;
+    letter-spacing: -0.6px;
+  }
+
+  .header p {
+    color: var(--text-secondary);
+    font-size: 13px;
+    margin-top: 2px;
+  }
+
+  .header-actions {
+    display: flex;
+    gap: 10px;
+    flex-wrap: wrap;
+    align-items: center;
+  }
+
+  .theme-toggle {
+    width: 52px;
+    height: 30px;
+    background: var(--input-bg);
+    border: 1px solid var(--glass-border);
+    border-radius: 15px;
+    position: relative;
+    cursor: pointer;
+    transition: background-color 0.3s ease;
+    flex-shrink: 0;
+  }
+
+  .theme-toggle-slider {
+    position: absolute;
+    top: 2px;
+    left: 2px;
+    width: 24px;
+    height: 24px;
+    background: linear-gradient(135deg, var(--accent), var(--purple));
+    border-radius: 50%;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 12px;
+    will-change: transform;
+    transition: transform 0.3s cubic-bezier(0.22, 1, 0.36, 1);
+    box-shadow: 0 2px 8px rgba(0, 0, 0, 0.2);
+  }
+
+  [data-theme="light"] .theme-toggle-slider {
+    transform: translate3d(22px, 0, 0);
+  }
+
+  .stats-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
+    gap: 16px;
+    margin-bottom: 24px;
+  }
+
+  .stat-card {
+    padding: 24px;
+    position: relative;
+    opacity: 0;
+    transform: translateY(15px);
+    animation: cardIn 0.5s cubic-bezier(0.22, 1, 0.36, 1) forwards;
+  }
+
+  .stat-card:nth-child(1) { animation-delay: 0.05s; }
+  .stat-card:nth-child(2) { animation-delay: 0.1s; }
+  .stat-card:nth-child(3) { animation-delay: 0.15s; }
+  .stat-card:nth-child(4) { animation-delay: 0.2s; }
+
+  @keyframes cardIn {
+    to { opacity: 1; transform: translateY(0); }
+  }
+
+  .stat-card.clickable { cursor: pointer; }
+
+  .stat-card.clickable:hover {
+    transform: translate3d(0, -4px, 0);
+    background: var(--glass-hover);
+  }
+
+  .stat-card.clickable.blue-hover:hover {
+    box-shadow: 0 12px 40px var(--accent-glow);
+  }
+
+  .stat-card.clickable.orange-hover:hover {
+    box-shadow: 0 12px 40px var(--warning-glow);
+  }
+
+  .stat-card:hover {
+    transform: translate3d(0, -4px, 0);
+    background: var(--glass-hover);
+  }
+
+  .stat-icon {
+    width: 40px;
+    height: 40px;
+    border-radius: 12px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 20px;
+    margin-bottom: 16px;
+    transition: transform 0.3s cubic-bezier(0.22, 1, 0.36, 1);
+  }
+
+  .stat-card.clickable:hover .stat-icon {
+    transform: scale(1.1) rotate(-5deg);
+  }
+
+  .stat-icon.blue { background: color-mix(in srgb, var(--accent) 15%, transparent); color: var(--accent); }
+  .stat-icon.green { background: color-mix(in srgb, var(--success) 15%, transparent); color: var(--success); }
+  .stat-icon.orange { background: color-mix(in srgb, var(--warning) 15%, transparent); color: var(--warning); }
+  .stat-icon.purple { background: color-mix(in srgb, var(--purple) 15%, transparent); color: var(--purple); }
+
+  .stat-card h3 {
+    font-size: 12px;
+    color: var(--text-secondary);
+    text-transform: uppercase;
+    letter-spacing: 0.8px;
+    font-weight: 600;
+    margin-bottom: 8px;
+    display: flex;
+    align-items: center;
+    gap: 6px;
+  }
+
+  .stat-card .value {
+    font-size: 32px;
+    font-weight: 700;
+    letter-spacing: -1px;
+    line-height: 1;
+  }
+
+  .stat-card .sub {
+    font-size: 12px;
+    color: var(--text-tertiary);
+    margin-top: 8px;
+    font-weight: 500;
+  }
+
+  .click-hint {
+    font-size: 10px;
+    color: var(--accent);
+    padding: 2px 6px;
+    background: color-mix(in srgb, var(--accent) 15%, transparent);
+    border-radius: 4px;
+  }
+
+  .click-hint.orange {
+    color: var(--warning);
+    background: color-mix(in srgb, var(--warning) 15%, transparent);
+  }
+
+  .section-box {
+    padding: 24px;
+    margin-bottom: 24px;
+    opacity: 0;
+    transform: translateY(15px);
+    animation: cardIn 0.5s cubic-bezier(0.22, 1, 0.36, 1) 0.25s forwards;
+  }
+
+  .section-header {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    margin-bottom: 20px;
+  }
+
+  .section-title {
+    font-size: 18px;
+    font-weight: 700;
+    letter-spacing: -0.4px;
+    display: flex;
+    align-items: center;
+    gap: 10px;
+  }
+
+  .section-badge {
+    padding: 4px 10px;
+    background: color-mix(in srgb, var(--accent) 15%, transparent);
+    color: var(--accent);
+    border-radius: 8px;
+    font-size: 11px;
+    font-weight: 600;
+  }
+
+  .recent-list {
+    display: flex;
+    flex-direction: column;
+    gap: 8px;
+  }
+
+  .recent-item {
+    display: flex;
+    align-items: center;
+    gap: 14px;
+    padding: 14px;
+    border-radius: 14px;
+    background: var(--card-inner-bg);
+    border: 1px solid var(--card-inner-border);
+    will-change: transform, background-color;
+    transition: transform 0.25s cubic-bezier(0.22, 1, 0.36, 1),
+                background-color 0.25s ease;
+  }
+
+  .recent-item:hover {
+    background: var(--glass-hover);
+    transform: translate3d(4px, 0, 0);
+  }
+
+  .recent-icon {
+    width: 44px;
+    height: 44px;
+    border-radius: 12px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 20px;
+    flex-shrink: 0;
+  }
+
+  .recent-icon.mobile {
+    background: linear-gradient(135deg, color-mix(in srgb, var(--success) 20%, transparent), color-mix(in srgb, var(--success) 5%, transparent));
+    border: 1px solid color-mix(in srgb, var(--success) 20%, transparent);
+  }
+
+  .recent-icon.desktop {
+    background: linear-gradient(135deg, color-mix(in srgb, var(--accent) 20%, transparent), color-mix(in srgb, var(--accent) 5%, transparent));
+    border: 1px solid color-mix(in srgb, var(--accent) 20%, transparent);
+  }
+
+  .recent-info { flex: 1; min-width: 0; }
+  .recent-info .name {
+    font-weight: 600;
+    font-size: 14px;
+    letter-spacing: -0.2px;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+  }
+  .recent-info .detail {
+    font-size: 12px;
+    color: var(--text-secondary);
+    margin-top: 3px;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+  }
+
+  .recent-times {
+    text-align: right;
+    flex-shrink: 0;
+    display: flex;
+    flex-direction: column;
+    gap: 4px;
+    align-items: flex-end;
+  }
+
+  .recent-duration {
+    font-size: 11px;
+    font-weight: 600;
+    padding: 3px 8px;
+    background: color-mix(in srgb, var(--warning) 15%, transparent);
+    color: var(--warning);
+    border-radius: 6px;
+    white-space: nowrap;
+  }
+
+  .recent-exact {
+    font-size: 10px;
+    color: var(--text-secondary);
+    font-weight: 500;
+    font-family: 'SF Mono', Menlo, Consolas, monospace;
+    white-space: nowrap;
+  }
+
+  .recent-ago {
+    font-size: 10px;
+    color: var(--text-tertiary);
+    font-weight: 500;
+    white-space: nowrap;
+  }
+
+  .controls {
+    display: flex;
+    gap: 10px;
+    margin-bottom: 16px;
+    flex-wrap: wrap;
+  }
+
+  .search-input {
+    flex: 1;
+    min-width: 200px;
+    padding: 14px 20px;
+    background: var(--input-bg);
+    border: 1px solid var(--glass-border);
+    color: var(--text-primary);
+    border-radius: 14px;
+    font-size: 14px;
+    font-family: inherit;
+    outline: none;
+    transition: background-color 0.2s ease, border-color 0.2s ease, box-shadow 0.2s ease;
+  }
+
+  .search-input:focus {
+    background: var(--glass-hover);
+    border-color: var(--accent);
+    box-shadow: 0 0 0 4px var(--accent-glow);
+  }
+
+  .table-wrapper {
+    background: var(--card-inner-bg);
+    border: 1px solid var(--glass-border);
+    border-radius: 18px;
+    overflow: auto;
+    max-height: 550px;
+  }
+
+  table {
+    width: 100%;
+    border-collapse: collapse;
+    font-size: 13px;
+  }
+
+  th {
+    background: var(--header-bg);
+    backdrop-filter: blur(20px);
+    -webkit-backdrop-filter: blur(20px);
+    padding: 14px 12px;
+    text-align: left;
+    position: sticky;
+    top: 0;
+    color: var(--text-secondary);
+    font-weight: 600;
+    letter-spacing: 0.5px;
+    text-transform: uppercase;
+    font-size: 11px;
+    z-index: 2;
+    border-bottom: 1px solid var(--glass-border);
+  }
+
+  td {
+    padding: 14px 12px;
+    border-bottom: 1px solid var(--card-inner-border);
+    color: var(--text-primary);
+  }
+
+  tr { transition: background-color 0.15s ease; }
+  tr:hover td { background: var(--card-inner-bg); }
+  tr:last-child td { border-bottom: none; }
+
+  .badge {
+    padding: 4px 10px;
+    border-radius: 8px;
+    font-size: 11px;
+    font-weight: 600;
+    display: inline-flex;
+    align-items: center;
+    gap: 4px;
+    white-space: nowrap;
+  }
+
+  .badge-mobile {
+    background: color-mix(in srgb, var(--success) 15%, transparent);
+    color: var(--success);
+    border: 1px solid color-mix(in srgb, var(--success) 20%, transparent);
+  }
+
+  .badge-desktop {
+    background: color-mix(in srgb, var(--accent) 15%, transparent);
+    color: var(--accent);
+    border: 1px solid color-mix(in srgb, var(--accent) 20%, transparent);
+  }
+
+  .location-link {
+    color: var(--accent);
+    text-decoration: none;
+    font-weight: 500;
+    transition: opacity 0.2s;
+    display: inline-flex;
+    align-items: center;
+    gap: 4px;
+    font-family: 'SF Mono', Menlo, Consolas, monospace;
+    font-size: 12px;
+  }
+  .location-link:hover { opacity: 0.75; text-decoration: underline; }
+
+  .no-data, .loading {
+    color: var(--text-tertiary);
+    font-size: 14px;
+    text-align: center;
+    padding: 40px 20px;
+    font-weight: 500;
+  }
+
+  /* ═══ MODAL ═══ */
+  .modal-overlay {
+    position: fixed;
+    top: 0;
+    left: 0;
+    right: 0;
+    bottom: 0;
+    background: var(--modal-overlay);
+    backdrop-filter: blur(12px);
+    -webkit-backdrop-filter: blur(12px);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    z-index: 9999;
+    padding: 20px;
+    opacity: 0;
+    visibility: hidden;
+    pointer-events: none;
+    transition: opacity 0.35s cubic-bezier(0.22, 1, 0.36, 1),
+                visibility 0s linear 0.35s;
+  }
+
+  .modal-overlay.active {
+    opacity: 1;
+    visibility: visible;
+    pointer-events: auto;
+    transition: opacity 0.35s cubic-bezier(0.22, 1, 0.36, 1),
+                visibility 0s linear 0s;
+  }
+
+  .modal {
+    background: var(--modal-bg);
+    backdrop-filter: blur(30px) saturate(180%);
+    -webkit-backdrop-filter: blur(30px) saturate(180%);
+    border: 1px solid var(--glass-border);
+    border-radius: 24px;
+    box-shadow: 0 24px 64px rgba(0, 0, 0, 0.5);
+    max-width: 640px;
+    width: 100%;
+    max-height: 85vh;
+    padding: 28px;
+    display: flex;
+    flex-direction: column;
+    transform: scale(0.85) translateY(30px);
+    opacity: 0;
+    will-change: transform, opacity;
+    transition: transform 0.4s cubic-bezier(0.22, 1, 0.36, 1),
+                opacity 0.3s ease;
+  }
+
+  .modal-overlay.active .modal {
+    transform: scale(1) translateY(0);
+    opacity: 1;
+  }
+
+  .modal-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    margin-bottom: 8px;
+    flex-shrink: 0;
+  }
+
+  .modal-title {
+    font-size: 20px;
+    font-weight: 700;
+    letter-spacing: -0.4px;
+    display: flex;
+    align-items: center;
+    gap: 10px;
+  }
+
+  .modal-subtitle {
+    font-size: 13px;
+    color: var(--text-secondary);
+    margin-bottom: 20px;
+    flex-shrink: 0;
+  }
+
+  .modal-close {
+    width: 32px;
+    height: 32px;
+    border-radius: 50%;
+    background: var(--input-bg);
+    border: none;
+    color: var(--text-primary);
+    cursor: pointer;
+    font-size: 16px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    transition: background-color 0.2s ease, transform 0.3s cubic-bezier(0.22, 1, 0.36, 1);
+    will-change: transform;
+  }
+
+  .modal-close:hover {
+    background: var(--glass-hover);
+    transform: rotate(90deg);
+  }
+
+  .modal-body {
+    overflow-y: auto;
+    flex: 1;
+    padding-right: 6px;
+    margin-right: -6px;
+  }
+
+  .ip-item {
+    display: flex;
+    align-items: center;
+    gap: 14px;
+    padding: 14px;
+    background: var(--card-inner-bg);
+    border: 1px solid var(--card-inner-border);
+    border-radius: 12px;
+    margin-bottom: 8px;
+    will-change: transform, opacity;
+    transition: transform 0.2s ease, background-color 0.2s ease;
+    opacity: 0;
+    transform: translateY(10px);
+  }
+
+  .modal-overlay.active .ip-item {
+    animation: ipItemIn 0.4s cubic-bezier(0.22, 1, 0.36, 1) forwards;
+  }
+
+  @keyframes ipItemIn {
+    to { opacity: 1; transform: translateY(0); }
+  }
+
+  .ip-item:hover {
+    background: var(--glass-hover);
+    transform: translate3d(4px, 0, 0);
+  }
+
+  .ip-rank {
+    width: 32px;
+    height: 32px;
+    border-radius: 50%;
+    background: var(--input-bg);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 12px;
+    font-weight: 700;
+    color: var(--text-secondary);
+    flex-shrink: 0;
+  }
+
+  .ip-rank.top {
+    background: linear-gradient(135deg, var(--accent), var(--purple));
+    color: white;
+    box-shadow: 0 4px 12px var(--accent-glow);
+  }
+
+  .ip-rank.top-orange {
+    background: linear-gradient(135deg, var(--warning), #ff6b00);
+    color: white;
+    box-shadow: 0 4px 12px var(--warning-glow);
+  }
+
+  .ip-info {
+    flex: 1;
+    min-width: 0;
+  }
+
+  .ip-address {
+    font-family: 'SF Mono', Menlo, Consolas, monospace;
+    font-size: 14px;
+    font-weight: 600;
+    color: var(--text-primary);
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+  }
+
+  .ip-location {
+    font-size: 12px;
+    color: var(--text-secondary);
+    margin-top: 2px;
+    display: flex;
+    align-items: center;
+    gap: 6px;
+    flex-wrap: wrap;
+  }
+
+  .ip-device-badge {
+    font-size: 10px;
+    padding: 2px 6px;
+    border-radius: 5px;
+    background: var(--input-bg);
+    color: var(--text-secondary);
+    font-weight: 600;
+  }
+
+  .ip-count {
+    padding: 6px 12px;
+    background: color-mix(in srgb, var(--accent) 15%, transparent);
+    color: var(--accent);
+    border-radius: 8px;
+    font-size: 13px;
+    font-weight: 700;
+    flex-shrink: 0;
+  }
+
+  .ip-count.orange {
+    background: color-mix(in srgb, var(--warning) 15%, transparent);
+    color: var(--warning);
+  }
+
+  .ip-count-wrap {
+    display: flex;
+    flex-direction: column;
+    align-items: flex-end;
+    gap: 4px;
+    flex-shrink: 0;
+  }
+
+  .ip-visits-mini {
+    font-size: 10px;
+    color: var(--text-tertiary);
+    font-weight: 500;
+  }
+
+  ::-webkit-scrollbar { width: 8px; height: 8px; }
+  ::-webkit-scrollbar-track { background: transparent; }
+  ::-webkit-scrollbar-thumb { background: var(--glass-border); border-radius: 4px; }
+  ::-webkit-scrollbar-thumb:hover { background: var(--text-tertiary); }
+
+  .mobile-cards { display: none; }
+
+  @media (max-width: 768px) {
+    .container { padding: 16px; }
+
+    .header {
+      flex-direction: column;
+      align-items: flex-start;
+      margin-bottom: 24px;
+    }
+
+    .header-title { width: 100%; }
+    .header h1 { font-size: 22px; }
+    .header p { font-size: 12px; }
+    .header-logo { width: 40px; height: 40px; font-size: 20px; }
+
+    .header-actions {
+      width: 100%;
+      display: grid;
+      grid-template-columns: repeat(3, 1fr) auto;
+      gap: 8px;
+    }
+
+    .btn {
+      padding: 12px 8px;
+      font-size: 12px;
+      border-radius: 12px;
+    }
+
+    .theme-toggle {
+      width: 44px;
+      height: 44px;
+      border-radius: 12px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+    }
+
+    .theme-toggle-slider {
+      position: static;
+      width: 100%;
+      height: 100%;
+      border-radius: 12px;
+      font-size: 18px;
+    }
+
+    [data-theme="light"] .theme-toggle-slider {
+      transform: none;
+    }
+
+    .stats-grid {
+      grid-template-columns: repeat(2, 1fr);
+      gap: 12px;
+    }
+
+    .stat-card {
+      padding: 18px 16px;
+      border-radius: 20px;
+    }
+
+    .stat-icon {
+      width: 34px;
+      height: 34px;
+      font-size: 16px;
+      margin-bottom: 12px;
+      border-radius: 10px;
+    }
+
+    .stat-card h3 { font-size: 10px; }
+    .stat-card .value { font-size: 24px; }
+    .stat-card .sub { font-size: 11px; }
+
+    .section-box {
+      padding: 20px 16px;
+      border-radius: 20px;
+    }
+
+    .section-title { font-size: 16px; }
+
+    .recent-item {
+      padding: 12px;
+      border-radius: 12px;
+      gap: 10px;
+    }
+
+    .recent-icon {
+      width: 40px;
+      height: 40px;
+      font-size: 18px;
+    }
+
+    .recent-info .name { font-size: 13px; }
+    .recent-info .detail { font-size: 11px; }
+    .recent-duration { font-size: 10px; padding: 2px 6px; }
+    .recent-exact { font-size: 9px; }
+    .recent-ago { font-size: 9px; }
+
+    .search-input {
+      padding: 12px 16px;
+      font-size: 13px;
+    }
+
+    .table-wrapper { display: none; }
+    .mobile-cards { display: flex; flex-direction: column; gap: 10px; }
+
+    .mobile-card {
+      background: var(--card-inner-bg);
+      border: 1px solid var(--glass-border);
+      border-radius: 16px;
+      padding: 16px;
+      opacity: 0;
+      animation: cardIn 0.4s cubic-bezier(0.22, 1, 0.36, 1) forwards;
+    }
+
+    .mobile-card-header {
+      display: flex;
+      justify-content: space-between;
+      align-items: flex-start;
+      margin-bottom: 12px;
+      gap: 12px;
+    }
+
+    .mobile-card-title {
+      display: flex;
+      align-items: center;
+      gap: 10px;
+      flex: 1;
+      min-width: 0;
+    }
+
+    .mobile-card-num {
+      font-size: 11px;
+      color: var(--text-tertiary);
+      font-weight: 600;
+      background: var(--input-bg);
+      padding: 3px 8px;
+      border-radius: 6px;
+    }
+
+    .mobile-card-ip {
+      font-size: 13px;
+      font-weight: 600;
+      color: var(--text-primary);
+      white-space: nowrap;
+      overflow: hidden;
+      text-overflow: ellipsis;
+      font-family: 'SF Mono', Menlo, monospace;
+    }
+
+    .mobile-card-grid {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 10px;
+      margin-top: 12px;
+      padding-top: 12px;
+      border-top: 1px solid var(--card-inner-border);
+    }
+
+    .mobile-card-item {
+      display: flex;
+      flex-direction: column;
+      gap: 2px;
+      min-width: 0;
+    }
+
+    .mobile-card-label {
+      font-size: 10px;
+      color: var(--text-tertiary);
+      text-transform: uppercase;
+      letter-spacing: 0.5px;
+      font-weight: 600;
+    }
+
+    .mobile-card-value {
+      font-size: 12px;
+      color: var(--text-primary);
+      font-weight: 500;
+      word-break: break-word;
+    }
+
+    .mobile-card-value.full { grid-column: 1 / -1; }
+    .mobile-card-value .location-link { font-size: 11px; }
+
+    .modal-overlay {
+      padding: 12px;
+      align-items: flex-end;
+    }
+
+    .modal {
+      padding: 20px;
+      border-radius: 24px 24px 20px 20px;
+      max-height: 88vh;
+      transform: translateY(100%);
+    }
+
+    .modal-overlay.active .modal {
+      transform: translateY(0);
+    }
+
+    .modal-title { font-size: 17px; }
+  }
+
+  @media (max-width: 400px) {
+    .stats-grid { grid-template-columns: 1fr; }
+    .header-actions {
+      grid-template-columns: 1fr 1fr auto;
+    }
+    .header-actions .btn:nth-child(3) { grid-column: 1 / -1; order: 3; }
+  }
+
+  .live-dot {
+    width: 8px;
+    height: 8px;
+    background: var(--success);
+    border-radius: 50%;
+    display: inline-block;
+    animation: pulseDot 2s ease-in-out infinite;
+    margin-right: 6px;
+    box-shadow: 0 0 12px var(--success);
+    will-change: opacity;
+  }
+
+  @keyframes pulseDot {
+    0%, 100% { opacity: 1; }
+    50% { opacity: 0.4; }
+  }
+
+  @media (prefers-reduced-motion: reduce) {
+    *, *::before, *::after {
+      animation-duration: 0.01ms !important;
+      transition-duration: 0.01ms !important;
+    }
   }
 </style>
 </head>
 <body>
 
-<!-- Login Screen -->
-<div id="loginScreen" class="login-box">
-  <h1>🔒 Admin Login</h1>
-  <input type="password" id="passwordInput" placeholder="Enter password...">
-  <button id="loginBtn">Login</button>
-  <p class="error" id="errorMsg"></p>
+<div id="loginScreen" class="login-screen">
+  <div class="glass login-box">
+    <div class="login-icon">🔐</div>
+    <h1>Welcome Back</h1>
+    <p>Sign in to access your dashboard</p>
+    <input type="password" id="passwordInput" class="input-field" placeholder="Enter password" autocomplete="off">
+    <button class="btn btn-primary" id="loginBtn">Sign In</button>
+    <p class="error" id="errorMsg"></p>
+  </div>
 </div>
 
-<!-- Dashboard -->
 <div id="dashboard" class="dashboard">
-  <h1>📊 Visitor Dashboard</h1>
-  
-  <!-- Stats Cards -->
-  <div class="stats-grid" id="statsGrid">
-    <div class="loading">Loading stats...</div>
-  </div>
-  
-  <!-- Charts -->
-  <div class="charts">
-    <div class="chart-box">
-      <h3>🌍 Top Countries</h3>
-      <div id="countryChart"><p class="no-data">Loading...</p></div>
+  <div class="container">
+
+    <div class="header">
+      <div class="header-title">
+        <div class="header-logo">📊</div>
+        <div>
+          <h1>Analytics</h1>
+          <p><span class="live-dot"></span>Live visitor tracking</p>
+        </div>
+      </div>
+      <div class="header-actions">
+        <button class="btn btn-secondary" id="refreshBtn">🔄 Refresh</button>
+        <button class="btn btn-secondary" id="exportBtn">📥 Export</button>
+        <button class="btn btn-danger" id="logoutBtn">🚪 Logout</button>
+        <div class="theme-toggle" id="themeToggle" title="Toggle theme">
+          <div class="theme-toggle-slider" id="themeSlider">🌙</div>
+        </div>
+      </div>
     </div>
-    <div class="chart-box">
-      <h3>🗺️ Top Regions</h3>
-      <div id="regionChart"><p class="no-data">Loading...</p></div>
+
+    <div class="stats-grid" id="statsGrid">
+      <div class="glass stat-card loading">Loading...</div>
     </div>
-    <div class="chart-box">
-      <h3>📱 Device Types</h3>
-      <div id="deviceChart"><p class="no-data">Loading...</p></div>
+
+    <div class="glass section-box">
+      <div class="section-header">
+        <div class="section-title">🕐 Recent Activity</div>
+        <span class="section-badge" id="recentCount">0</span>
+      </div>
+      <div class="recent-list" id="recentVisits">
+        <p class="no-data">Loading...</p>
+      </div>
     </div>
+
+    <div class="glass section-box">
+      <div class="section-header">
+        <div class="section-title">📋 All Visits</div>
+        <span class="section-badge" id="totalCount">0</span>
+      </div>
+      <div class="controls">
+        <input type="text" class="search-input" id="searchInput" placeholder="🔍 Search visits...">
+      </div>
+
+      <div class="table-wrapper">
+        <table>
+          <thead>
+            <tr>
+              <th>#</th>
+              <th>Time</th>
+              <th>IP</th>
+              <th>City</th>
+              <th>Country</th>
+              <th>Location</th>
+              <th>Device</th>
+              <th>Screen</th>
+              <th>Time Spent</th>
+            </tr>
+          </thead>
+          <tbody id="tableBody">
+            <tr><td colspan="9" class="loading">Loading...</td></tr>
+          </tbody>
+        </table>
+      </div>
+
+      <div class="mobile-cards" id="mobileCards"></div>
+    </div>
+
   </div>
-  
-  <!-- Controls -->
-  <div class="controls">
-    <input type="text" id="searchInput" placeholder="🔍 Search by IP, city, country, region...">
-    <button id="refreshBtn">🔄 Refresh</button>
-    <button id="exportBtn">📥 Export CSV</button>
-    <button id="logoutBtn" class="logout">🚪 Logout</button>
+</div>
+
+<!-- Unique Visitors Modal -->
+<div class="modal-overlay" id="ipModal">
+  <div class="modal">
+    <div class="modal-header">
+      <div class="modal-title">🌐 Unique Visitors</div>
+      <button class="modal-close" data-modal="ipModal">✕</button>
+    </div>
+    <p class="modal-subtitle">Distinct IP addresses and their visit counts</p>
+    <div class="modal-body" id="ipList"></div>
   </div>
-  
-  <!-- Table -->
-  <div class="table-wrapper">
-    <table>
-      <thead>
-        <tr>
-          <th>#</th>
-          <th>Time (IST)</th>
-          <th>IP Address</th>
-          <th>City</th>
-          <th>Region</th>
-          <th>Country</th>
-          <th>Location</th>
-          <th>Device</th>
-          <th>Screen</th>
-          <th>Page</th>
-          <th>Time Spent</th>
-        </tr>
-      </thead>
-      <tbody id="tableBody">
-        <tr><td colspan="11" class="loading">Loading data...</td></tr>
-      </tbody>
-    </table>
+</div>
+
+<!-- Time Per Device Modal -->
+<div class="modal-overlay" id="timeModal">
+  <div class="modal">
+    <div class="modal-header">
+      <div class="modal-title">⏱️ Time Per Device</div>
+      <button class="modal-close" data-modal="timeModal">✕</button>
+    </div>
+    <p class="modal-subtitle">Total time each unique device spent on the site</p>
+    <div class="modal-body" id="timeList"></div>
   </div>
 </div>
 
 <script>
-  // ⚠️ CHANGE THESE THREE VALUES TO YOUR OWN
   const ADMIN_PASSWORD = "2558";
   const SUPABASE_URL = "https://skmjiejwtdsiqzjqyspq.supabase.co";
   const SUPABASE_KEY = "sb_publishable_Vzv5w63zsA6YylWNyQA82Q_H5XKKW77";
-  
+
   let supabaseClient;
   let allData = [];
 
-  // Initialize Supabase
   try {
     supabaseClient = supabase.createClient(SUPABASE_URL, SUPABASE_KEY);
-    console.log("✅ Supabase initialized");
-  } catch (e) {
-    console.error("❌ Supabase init failed:", e);
+  } catch (e) { console.error(e); }
+
+  function initTheme() {
+    const saved = localStorage.getItem('theme') || 'dark';
+    document.documentElement.setAttribute('data-theme', saved);
+    document.getElementById('themeSlider').textContent = saved === 'dark' ? '🌙' : '☀️';
   }
 
-  // ============ AUTH ============
+  function toggleTheme() {
+    const current = document.documentElement.getAttribute('data-theme');
+    const next = current === 'dark' ? 'light' : 'dark';
+    document.documentElement.setAttribute('data-theme', next);
+    localStorage.setItem('theme', next);
+    document.getElementById('themeSlider').textContent = next === 'dark' ? '🌙' : '☀️';
+  }
+
   function login() {
-    console.log("Login attempted");
     const pass = document.getElementById('passwordInput').value;
     if (pass === ADMIN_PASSWORD) {
-      console.log("✅ Login successful");
       sessionStorage.setItem('adminAuth', 'true');
       showDashboard();
     } else {
-      console.log("❌ Wrong password");
-      document.getElementById('errorMsg').textContent = "Wrong password! Try again.";
+      const err = document.getElementById('errorMsg');
+      err.textContent = "Incorrect password";
+      document.getElementById('passwordInput').value = '';
+      setTimeout(() => err.textContent = '', 3000);
     }
   }
 
@@ -182,157 +1315,407 @@
 
   function showDashboard() {
     document.getElementById('loginScreen').style.display = 'none';
-    document.getElementById('dashboard').style.display = 'block';
+    document.getElementById('dashboard').classList.add('active');
     loadData();
   }
 
-  // ============ DATA LOADING ============
   async function loadData() {
     try {
       const { data, error } = await supabaseClient
         .from('visitors')
         .select('*')
         .order('id', { ascending: false });
-      
-      if (error) {
-        alert("Error loading data: " + error.message);
-        console.error(error);
-        return;
-      }
-      
+      if (error) { alert("Error: " + error.message); return; }
       allData = data || [];
-      console.log("✅ Loaded", allData.length, "visitors");
-      renderStats(allData);
-      renderCharts(allData);
-      renderTable(allData);
-    } catch (e) {
-      alert("Error: " + e.message);
-      console.error(e);
-    }
+      requestAnimationFrame(() => {
+        renderStats(allData);
+        renderRecentVisits(allData);
+        renderTable(allData);
+        renderMobileCards(allData);
+      });
+    } catch (e) { alert("Error: " + e.message); }
   }
 
-  // ============ STATS ============
+  function isMobile(v) { return /Mobile|Android|iPhone|iPad/i.test(v.device || ''); }
+
+  function getBrowser(v) {
+    const ua = v.device || '';
+    if (/Edg/i.test(ua)) return 'Edge';
+    if (/OPR|Opera/i.test(ua)) return 'Opera';
+    if (/Chrome/i.test(ua)) return 'Chrome';
+    if (/Firefox/i.test(ua)) return 'Firefox';
+    if (/Safari/i.test(ua)) return 'Safari';
+    return 'Unknown';
+  }
+
+  function getDeviceLabel(v) {
+    const ua = v.device || '';
+    if (/iPhone/i.test(ua)) return 'iPhone';
+    if (/Android.*Mobile/i.test(ua)) return 'Android Phone';
+    if (/Android/i.test(ua)) return 'Android Tablet';
+    if (/iPad/i.test(ua)) return 'iPad';
+    if (/Macintosh/i.test(ua)) return 'Mac';
+    if (/Windows/i.test(ua)) return 'Windows PC';
+    if (/Linux/i.test(ua)) return 'Linux PC';
+    return 'Desktop';
+  }
+
+  function getDeviceFingerprint(v) {
+    return `${v.ip || 'unknown'}::${getDeviceLabel(v)}::${v.screen_res || ''}`;
+  }
+
+  function getVisitTime(v) { return v.visit_time_ist || v.created_at || ''; }
+  function getVisitTimestamp(v) { return v.created_at || v.visit_time_ist || ''; }
+
+  function parseDate(dateStr) {
+    if (!dateStr) return null;
+    let then;
+    if (typeof dateStr === 'string' && dateStr.includes('/')) {
+      const m = dateStr.match(/(\d{1,2})\/(\d{1,2})\/(\d{4}),?\s*(\d{1,2}):(\d{2}):(\d{2})/);
+      if (m) then = new Date(Date.UTC(+m[3], +m[2]-1, +m[1], +m[4]-5, +m[5]-30, +m[6]));
+    }
+    if (!then && typeof dateStr === 'string' && dateStr.includes('-') && !dateStr.includes('T')) {
+      const m = dateStr.match(/(\d{4})-(\d{2})-(\d{2})[\sT](\d{1,2}):(\d{2}):(\d{2})/);
+      if (m) then = new Date(Date.UTC(+m[1], +m[2]-1, +m[3], +m[4]-5, +m[5]-30, +m[6]));
+    }
+    if (!then || isNaN(then.getTime())) then = new Date(dateStr);
+    return isNaN(then.getTime()) ? null : then;
+  }
+
+  function timeAgo(dateStr) {
+    const then = parseDate(dateStr);
+    if (!then) return '';
+    const diff = Math.floor((new Date() - then) / 1000);
+    if (diff < 0) return 'just now';
+    if (diff < 60) return `${diff}s ago`;
+    if (diff < 3600) return `${Math.floor(diff/60)}m ago`;
+    if (diff < 86400) return `${Math.floor(diff/3600)}h ago`;
+    if (diff < 2592000) return `${Math.floor(diff/86400)}d ago`;
+    if (diff < 31536000) return `${Math.floor(diff/2592000)}mo ago`;
+    return `${Math.floor(diff/31536000)}y ago`;
+  }
+
+  function formatExactTime(dateStr) {
+    const then = parseDate(dateStr);
+    if (!then) return '';
+    const istOptions = {
+      timeZone: 'Asia/Kolkata',
+      day: '2-digit',
+      month: 'short',
+      hour: '2-digit',
+      minute: '2-digit',
+      hour12: true
+    };
+    try { return then.toLocaleString('en-IN', istOptions); }
+    catch(e) { return then.toLocaleString(); }
+  }
+
+  function formatTime(seconds) {
+    if (!seconds) return '0s';
+    if (seconds < 60) return `${seconds}s`;
+    if (seconds < 3600) return `${Math.floor(seconds/60)}m ${seconds%60}s`;
+    return `${Math.floor(seconds/3600)}h ${Math.floor((seconds%3600)/60)}m`;
+  }
+
+  function formatCoords(latLon) {
+    if (!latLon || latLon === '0, 0' || latLon.includes('null')) return null;
+    return latLon.trim();
+  }
+
   function renderStats(data) {
     const totalVisits = data.length;
-    const uniqueIPs = new Set(data.map(v => v.ip)).size;
-    const avgTime = data.length ? Math.round(data.reduce((s, v) => s + (v.time_spent || 0), 0) / data.length) : 0;
-    const countries = new Set(data.map(v => v.country).filter(c => c && c !== 'Unknown')).size;
-    const mobileCount = data.filter(v => /Mobile|Android|iPhone/i.test(v.device || '')).length;
+    const uniqueIPs = new Set(data.map(v => v.ip).filter(Boolean)).size;
+    const totalTime = data.reduce((s, v) => s + (v.time_spent || 0), 0);
+    const mobileCount = data.filter(isMobile).length;
     const mobilePct = data.length ? Math.round((mobileCount / data.length) * 100) : 0;
-    
+
     document.getElementById('statsGrid').innerHTML = `
-      <div class="stat-card"><h3>Total Visits</h3><div class="value">${totalVisits}</div></div>
-      <div class="stat-card"><h3>Unique Visitors</h3><div class="value">${uniqueIPs}</div></div>
-      <div class="stat-card"><h3>Avg Time (sec)</h3><div class="value">${avgTime}s</div></div>
-      <div class="stat-card"><h3>Countries</h3><div class="value">${countries}</div></div>
-      <div class="stat-card"><h3>📱 Mobile</h3><div class="value">${mobilePct}%</div></div>
-    `;
-  }
-
-  // ============ CHARTS ============
-  function renderCharts(data) {
-    // Country chart
-    const countryCount = {};
-    data.forEach(v => {
-      const c = v.country || 'Unknown';
-      if (c !== 'Unknown') countryCount[c] = (countryCount[c] || 0) + 1;
-    });
-    const topCountries = Object.entries(countryCount).sort((a,b) => b[1]-a[1]).slice(0, 5);
-    renderBarChart('countryChart', topCountries);
-
-    // Region chart
-    const regionCount = {};
-    data.forEach(v => {
-      const r = v.region || 'Unknown';
-      if (r !== 'Unknown') regionCount[r] = (regionCount[r] || 0) + 1;
-    });
-    const topRegions = Object.entries(regionCount).sort((a,b) => b[1]-a[1]).slice(0, 5);
-    renderBarChart('regionChart', topRegions);
-
-    // Device chart
-    const mobile = data.filter(v => /Mobile|Android|iPhone/i.test(v.device || '')).length;
-    const desktop = data.length - mobile;
-    const total = data.length || 1;
-    document.getElementById('deviceChart').innerHTML = total === 0 ? '<p class="no-data">No data yet</p>' : `
-      <div class="bar-item">
-        <div class="bar-label"><span>📱 Mobile</span><span>${mobile} (${Math.round(mobile/total*100)}%)</span></div>
-        <div class="bar-bg"><div class="bar-fill" style="width:${(mobile/total)*100}%"></div></div>
+      <div class="glass stat-card">
+        <div class="stat-icon blue">👥</div>
+        <h3>Total Visits</h3>
+        <div class="value">${totalVisits}</div>
+        <div class="sub">All-time views</div>
       </div>
-      <div class="bar-item">
-        <div class="bar-label"><span>💻 Desktop</span><span>${desktop} (${Math.round(desktop/total*100)}%)</span></div>
-        <div class="bar-bg"><div class="bar-fill" style="width:${(desktop/total)*100}%"></div></div>
+      <div class="glass stat-card clickable blue-hover" id="uniqueCard">
+        <div class="stat-icon green">🌐</div>
+        <h3>Unique Visitors <span class="click-hint">Tap</span></h3>
+        <div class="value">${uniqueIPs}</div>
+        <div class="sub">Distinct IPs · Click to view</div>
+      </div>
+      <div class="glass stat-card clickable orange-hover" id="timeCard">
+        <div class="stat-icon orange">⏱️</div>
+        <h3>Total Time <span class="click-hint orange">Tap</span></h3>
+        <div class="value">${formatTime(totalTime)}</div>
+        <div class="sub">Click to see per device</div>
+      </div>
+      <div class="glass stat-card">
+        <div class="stat-icon purple">📱</div>
+        <h3>Mobile Traffic</h3>
+        <div class="value">${mobilePct}%</div>
+        <div class="sub">${mobileCount} mobile visits</div>
       </div>
     `;
+
+    document.getElementById('uniqueCard').addEventListener('click', showUniqueVisitors);
+    document.getElementById('timeCard').addEventListener('click', showTimePerDevice);
   }
 
-  function renderBarChart(elementId, items) {
-    if (items.length === 0) {
-      document.getElementById(elementId).innerHTML = '<p class="no-data">No data yet</p>';
-      return;
-    }
-    const maxVal = Math.max(...items.map(i => i[1]), 1);
-    document.getElementById(elementId).innerHTML = items.map(([name, val]) => `
-      <div class="bar-item">
-        <div class="bar-label"><span>${name}</span><span>${val}</span></div>
-        <div class="bar-bg"><div class="bar-fill" style="width:${(val/maxVal)*100}%"></div></div>
-      </div>
-    `).join('');
+  // ═══ Modal helpers ═══
+  function openModal(id) {
+    document.body.classList.add('modal-open');
+    document.getElementById(id).classList.add('active');
   }
 
-  // ============ TABLE ============
-  function renderTable(data) {
-    if (data.length === 0) {
-      document.getElementById('tableBody').innerHTML = '<tr><td colspan="11" class="loading">No visitors yet</td></tr>';
-      return;
-    }
-    
-    document.getElementById('tableBody').innerHTML = data.map((v, index) => {
-      const isMobile = /Mobile|Android|iPhone/i.test(v.device || '');
-      const browser = (v.device || '').match(/(Chrome|Firefox|Safari|Edge)/)?.[0] || 'Unknown';
-      
-      // Google Maps link for location
-      let locationCell = '-';
-      if (v.lat_lon && v.lat_lon !== '0, 0' && v.lat_lon !== 'null, null' && !v.lat_lon.includes('0, 0')) {
-        const coords = v.lat_lon.replace(/\s/g, '');
-        locationCell = `<a href="https://www.google.com/maps?q=${coords}" target="_blank" class="location-link" title="Open in Google Maps">📍 ${v.lat_lon}</a>`;
+  function closeModal(id) {
+    document.getElementById(id).classList.remove('active');
+    document.body.classList.remove('modal-open');
+  }
+
+  function closeAllModals() {
+    document.querySelectorAll('.modal-overlay').forEach(m => m.classList.remove('active'));
+    document.body.classList.remove('modal-open');
+  }
+
+  // ═══ Unique Visitors ═══
+  function showUniqueVisitors() {
+    const ipMap = {};
+    allData.forEach(v => {
+      const ip = v.ip;
+      if (!ip) return;
+      if (!ipMap[ip]) {
+        ipMap[ip] = {
+          ip,
+          count: 0,
+          city: v.city || '',
+          country: v.country || '',
+          lastVisit: getVisitTimestamp(v)
+        };
       }
-      
+      ipMap[ip].count++;
+      if (v.city && v.city !== 'Unknown') ipMap[ip].city = v.city;
+      if (v.country && v.country !== 'Unknown') ipMap[ip].country = v.country;
+    });
+
+    const ips = Object.values(ipMap).sort((a, b) => b.count - a.count);
+
+    if (ips.length === 0) {
+      document.getElementById('ipList').innerHTML = '<p class="no-data">No visitors yet</p>';
+    } else {
+      document.getElementById('ipList').innerHTML = ips.map((item, i) => {
+        const loc = [item.city, item.country].filter(x => x && x !== 'Unknown').join(', ');
+        const delay = Math.min(i * 0.04, 0.5);
+        return `
+          <div class="ip-item" style="animation-delay:${delay}s">
+            <div class="ip-rank ${i < 3 ? 'top' : ''}">${i + 1}</div>
+            <div class="ip-info">
+              <div class="ip-address">${item.ip}</div>
+              <div class="ip-location">${loc || 'Unknown location'} · ${timeAgo(item.lastVisit)}</div>
+            </div>
+            <div class="ip-count">${item.count} ${item.count === 1 ? 'visit' : 'visits'}</div>
+          </div>
+        `;
+      }).join('');
+    }
+
+    openModal('ipModal');
+  }
+
+  // ═══ Time Per Device ═══
+  function showTimePerDevice() {
+    const deviceMap = {};
+    allData.forEach(v => {
+      const ip = v.ip;
+      if (!ip) return;
+      const fp = getDeviceFingerprint(v);
+      if (!deviceMap[fp]) {
+        deviceMap[fp] = {
+          ip,
+          deviceLabel: getDeviceLabel(v),
+          browser: getBrowser(v),
+          mobile: isMobile(v),
+          totalTime: 0,
+          visits: 0,
+          city: v.city || '',
+          country: v.country || '',
+          lastVisit: getVisitTimestamp(v)
+        };
+      }
+      deviceMap[fp].totalTime += (v.time_spent || 0);
+      deviceMap[fp].visits++;
+      if (v.city && v.city !== 'Unknown') deviceMap[fp].city = v.city;
+      if (v.country && v.country !== 'Unknown') deviceMap[fp].country = v.country;
+    });
+
+    const devices = Object.values(deviceMap)
+      .filter(d => d.totalTime > 0)
+      .sort((a, b) => b.totalTime - a.totalTime);
+
+    if (devices.length === 0) {
+      document.getElementById('timeList').innerHTML = '<p class="no-data">No time data yet</p>';
+    } else {
+      document.getElementById('timeList').innerHTML = devices.map((d, i) => {
+        const loc = [d.city, d.country].filter(x => x && x !== 'Unknown').join(', ');
+        const delay = Math.min(i * 0.04, 0.5);
+        const icon = d.mobile ? '📱' : '💻';
+        return `
+          <div class="ip-item" style="animation-delay:${delay}s">
+            <div class="ip-rank ${i < 3 ? 'top-orange' : ''}">${i + 1}</div>
+            <div class="ip-info">
+              <div class="ip-address">${icon} ${d.ip}</div>
+              <div class="ip-location">
+                <span class="ip-device-badge">${d.deviceLabel} · ${d.browser}</span>
+                ${loc ? '· ' + loc : ''}
+              </div>
+            </div>
+            <div class="ip-count-wrap">
+              <div class="ip-count orange">${formatTime(d.totalTime)}</div>
+              <div class="ip-visits-mini">${d.visits} ${d.visits === 1 ? 'visit' : 'visits'}</div>
+            </div>
+          </div>
+        `;
+      }).join('');
+    }
+
+    openModal('timeModal');
+  }
+
+  function renderRecentVisits(data) {
+    if (data.length === 0) {
+      document.getElementById('recentVisits').innerHTML = '<p class="no-data">No visits yet</p>';
+      document.getElementById('recentCount').textContent = '0';
+      return;
+    }
+    const recent = data.slice(0, 5);
+    document.getElementById('recentCount').textContent = recent.length;
+    document.getElementById('recentVisits').innerHTML = recent.map(v => {
+      const mobile = isMobile(v);
+      const browser = getBrowser(v);
+      const label = getDeviceLabel(v);
+      const loc = [v.city, v.country].filter(x => x && x !== 'Unknown').join(', ');
+      const timestamp = getVisitTimestamp(v);
+      const ago = timeAgo(timestamp);
+      const exact = formatExactTime(timestamp);
+      const duration = v.time_spent || 0;
+      return `
+        <div class="recent-item">
+          <div class="recent-icon ${mobile ? 'mobile' : 'desktop'}">${mobile ? '📱' : '💻'}</div>
+          <div class="recent-info">
+            <div class="name">${label} · ${browser}</div>
+            <div class="detail">${v.ip || '-'}${loc ? ' · ' + loc : ''}</div>
+          </div>
+          <div class="recent-times">
+            <div class="recent-duration">⏱ ${formatTime(duration)}</div>
+            <div class="recent-exact">🕐 ${exact}</div>
+            <div class="recent-ago">${ago}</div>
+          </div>
+        </div>
+      `;
+    }).join('');
+  }
+
+  function renderTable(data) {
+    document.getElementById('totalCount').textContent = data.length;
+    if (data.length === 0) {
+      document.getElementById('tableBody').innerHTML = '<tr><td colspan="9" class="no-data">No visitors yet</td></tr>';
+      return;
+    }
+    document.getElementById('tableBody').innerHTML = data.map((v, i) => {
+      const mobile = isMobile(v);
+      const browser = getBrowser(v);
+      const coords = formatCoords(v.lat_lon);
+      let locationCell = '-';
+      if (coords) {
+        const clean = coords.replace(/\s/g, '');
+        locationCell = `<a href="https://www.google.com/maps?q=${clean}" target="_blank" class="location-link">📍 ${coords}</a>`;
+      }
       return `
         <tr>
-          <td>${index + 1}</td>
-          <td>${v.visit_time_ist || v.created_at || '-'}</td>
+          <td>${i + 1}</td>
+          <td>${getVisitTime(v) || '-'}</td>
           <td>${v.ip || '-'}</td>
           <td>${v.city || '-'}</td>
-          <td>${v.region || '-'}</td>
           <td>${v.country || '-'}</td>
           <td>${locationCell}</td>
-          <td><span class="badge ${isMobile ? 'badge-mobile' : 'badge-desktop'}">${isMobile ? '📱' : '💻'} ${browser}</span></td>
+          <td><span class="badge ${mobile ? 'badge-mobile' : 'badge-desktop'}">${mobile ? '📱' : '💻'} ${browser}</span></td>
           <td>${v.screen_res || '-'}</td>
-          <td>${(v.page_url || '').replace('https://', '').substring(0, 30)}</td>
           <td>${v.time_spent || 0}s</td>
         </tr>
       `;
     }).join('');
   }
 
-  // ============ SEARCH ============
-  function filterData() {
-    const q = document.getElementById('searchInput').value.toLowerCase();
-    const filtered = allData.filter(v => JSON.stringify(v).toLowerCase().includes(q));
-    renderTable(filtered);
-  }
-
-  // ============ EXPORT CSV ============
-  function exportCSV() {
-    if (allData.length === 0) {
-      alert("No data to export!");
+  function renderMobileCards(data) {
+    if (data.length === 0) {
+      document.getElementById('mobileCards').innerHTML = '<p class="no-data">No visitors yet</p>';
       return;
     }
-    
-    const headers = ['#','Time (IST)','IP','City','Region','Country','Lat/Lon','Device','Screen','Page','Time Spent (s)'];
+    document.getElementById('mobileCards').innerHTML = data.map((v, i) => {
+      const mobile = isMobile(v);
+      const browser = getBrowser(v);
+      const label = getDeviceLabel(v);
+      const coords = formatCoords(v.lat_lon);
+      let locationHTML = '-';
+      if (coords) {
+        const clean = coords.replace(/\s/g, '');
+        locationHTML = `<a href="https://www.google.com/maps?q=${clean}" target="_blank" class="location-link">📍 ${coords}</a>`;
+      }
+      const loc = [v.city, v.country].filter(x => x && x !== 'Unknown').join(', ') || '-';
+      const delay = Math.min(i * 0.03, 0.3);
+      return `
+        <div class="mobile-card" style="animation-delay:${delay}s">
+          <div class="mobile-card-header">
+            <div class="mobile-card-title">
+              <span class="mobile-card-num">#${i + 1}</span>
+              <span class="mobile-card-ip">${v.ip || '-'}</span>
+            </div>
+            <span class="badge ${mobile ? 'badge-mobile' : 'badge-desktop'}">${mobile ? '📱' : '💻'} ${browser}</span>
+          </div>
+          <div class="mobile-card-grid">
+            <div class="mobile-card-item">
+              <span class="mobile-card-label">Device</span>
+              <span class="mobile-card-value">${label}</span>
+            </div>
+            <div class="mobile-card-item">
+              <span class="mobile-card-label">Time Spent</span>
+              <span class="mobile-card-value">${v.time_spent || 0}s</span>
+            </div>
+            <div class="mobile-card-item">
+              <span class="mobile-card-label">Location</span>
+              <span class="mobile-card-value">${loc}</span>
+            </div>
+            <div class="mobile-card-item">
+              <span class="mobile-card-label">Coords</span>
+              <span class="mobile-card-value">${locationHTML}</span>
+            </div>
+            <div class="mobile-card-item full">
+              <span class="mobile-card-label">Visit Time</span>
+              <span class="mobile-card-value">${getVisitTime(v) || '-'}</span>
+            </div>
+          </div>
+        </div>
+      `;
+    }).join('');
+  }
+
+  let searchTimer;
+  function filterData() {
+    clearTimeout(searchTimer);
+    searchTimer = setTimeout(() => {
+      const q = document.getElementById('searchInput').value.toLowerCase();
+      const filtered = q ? allData.filter(v => JSON.stringify(v).toLowerCase().includes(q)) : allData;
+      requestAnimationFrame(() => {
+        renderTable(filtered);
+        renderMobileCards(filtered);
+      });
+    }, 150);
+  }
+
+  function exportCSV() {
+    if (allData.length === 0) { alert("No data to export"); return; }
+    const headers = ['#','Time','IP','City','Region','Country','Lat/Lon','Device','Screen','Page','Time Spent (s)'];
     const rows = allData.map((v, i) => [
       i + 1,
-      `"${v.visit_time_ist || v.created_at || '-'}"`,
+      `"${getVisitTime(v) || '-'}"`,
       v.ip || '-',
       `"${v.city || '-'}"`,
       `"${v.region || '-'}"`,
@@ -351,23 +1734,34 @@
     link.click();
   }
 
-  // ============ EVENT LISTENERS ============
   document.addEventListener('DOMContentLoaded', () => {
-    console.log("✅ DOM loaded, attaching events");
-    
+    initTheme();
     document.getElementById('loginBtn').addEventListener('click', login);
-    document.getElementById('passwordInput').addEventListener('keypress', (e) => {
-      if (e.key === 'Enter') login();
-    });
+    document.getElementById('passwordInput').addEventListener('keypress', e => { if (e.key === 'Enter') login(); });
     document.getElementById('refreshBtn').addEventListener('click', loadData);
     document.getElementById('exportBtn').addEventListener('click', exportCSV);
     document.getElementById('logoutBtn').addEventListener('click', logout);
     document.getElementById('searchInput').addEventListener('input', filterData);
-    
-    // Auto-login if session exists
-    if (sessionStorage.getItem('adminAuth') === 'true') {
-      showDashboard();
-    }
+    document.getElementById('themeToggle').addEventListener('click', toggleTheme);
+
+    // Modal close buttons
+    document.querySelectorAll('.modal-close').forEach(btn => {
+      btn.addEventListener('click', () => closeModal(btn.dataset.modal));
+    });
+
+    // Click outside to close
+    document.querySelectorAll('.modal-overlay').forEach(overlay => {
+      overlay.addEventListener('click', e => {
+        if (e.target === overlay) closeModal(overlay.id);
+      });
+    });
+
+    // ESC to close
+    document.addEventListener('keydown', e => {
+      if (e.key === 'Escape') closeAllModals();
+    });
+
+    if (sessionStorage.getItem('adminAuth') === 'true') showDashboard();
   });
 </script>
 
