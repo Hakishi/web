@@ -10,8 +10,30 @@ jobs:
   ping-supabase:
     runs-on: ubuntu-latest
     steps:
-      - name: Ping Supabase
+      - name: Force Database Activity
         run: |
-          curl -X GET "https://skmjiejwtdsiqzjqyspq.supabase.co/rest/v1/visitors?select=id&limit=1" \
-          -H "apikey: sb_publishable_Vzv5w63zsA6YylWNyQA82Q_H5XKKW77" \
-          -H "Authorization: Bearer sb_publishable_Vzv5w63zsA6YylWNyQA82Q_H5XKKW77"
+          echo "Sending Heartbeat to Supabase..."
+          # This performs a real INSERT into the database
+          RESPONSE=$(curl -s -o /dev/null -w "%{http_code}" \
+            -X POST "https://skmjiejwtdsiqzjqyspq.supabase.co/rest/v1/_heartbeat" \
+            -H "apikey: sb_publishable_Vzv5w63zsA6YylWNyQA82Q_H5XKKW77" \
+            -H "Authorization: Bearer sb_publishable_Vzv5w63zsA6YylWNyQA82Q_H5XKKW77" \
+            -H "Content-Type: application/json" \
+            -d '{"created_at": "'$(date -u +%Y-%m-%dT%H:%M:%SZ)'"}')
+          
+          echo "Insert Response: $RESPONSE"
+          
+          # This performs a real SELECT from the database
+          GET_RES=$(curl -s -o /dev/null -w "%{http_code}" \
+            -X GET "https://skmjiejwtdsiqzjqyspq.supabase.co/rest/v1/_heartbeat?select=id&limit=1" \
+            -H "apikey: sb_publishable_Vzv5w63zsA6YylWNyQA82Q_H5XKKW77" \
+            -H "Authorization: Bearer sb_publishable_Vzv5w63zsA6YylWNyQA82Q_H5XKKW77")
+          
+          echo "Select Response: $GET_RES"
+
+          if [ "$RESPONSE" = "201" ] || [ "$GET_RES" = "200" ]; then
+            echo "✅ Real Database Activity Confirmed"
+          else
+            echo "❌ Activity failed. Check RLS policies."
+            exit 1
+          fi
